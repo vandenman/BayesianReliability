@@ -1,0 +1,29 @@
+{
+	"moduleDescription" :
+	{
+		"title" : 					"Bayesian Reliability",
+		"description": 			"TODO",
+		"version":					"0.1",
+		"author":						"Julius Pfadt, Don van den Bergh & Eric-Jan Wagenmakers",
+		"maintainer":				"Julius Pfadt <julius.pfadt@gmail.com>",
+		"website":					"https://github.com/vandenman/BayesianReliability",
+		"license":					"GPL (>= 2)",
+		"icon":     				"testIcon.svg",
+		"requiresDataset": 	true
+	},
+
+	//"requiredPackages":	[
+	//  { "package": "Bayesrel" }
+	//],
+	"requiredPackages":	[],
+
+	"menu":
+	[
+		{
+			"title"   : "Bayesian Reliability",
+			"icon"    :	"testIcon.svg",
+			"qml"     : "BayesianReliability.qml",
+			"function": "BayesianReliability"
+		}
+	]
+}
