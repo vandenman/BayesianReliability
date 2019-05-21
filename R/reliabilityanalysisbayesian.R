@@ -1,5 +1,8 @@
 BayesianReliability <- function(jaspResults, dataset, options) {
 
+  if (!require("Bayesrel"))
+    install.packages("Bayesrel")
+
 	dataset <- .BayesianReliabilityReadData(dataset, options)
 
 	.BayesianReliabilityCheckErrors(dataset, options)
@@ -73,8 +76,10 @@ BayesianReliability <- function(jaspResults, dataset, options) {
         dataset <- dataset %*% diag(key, nvar, nvar)
       }
 
+      model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
+
       relyFit <- try(Bayesrel::strel(x = dataset, freq = FALSE, n.iter = options[["noSamples"]],
-                                     item.dropped = TRUE))
+                                     item.dropped = TRUE, prior.samp = TRUE, omega.fit = TRUE))
       # Consider stripping some of the contents of relyFit to reduce memory load
 
       if (inherits(relyFit, "try-error")) {
@@ -89,7 +94,6 @@ BayesianReliability <- function(jaspResults, dataset, options) {
         }
 
         model[["relyFit"]] <- relyFit
-        model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
 
         stateObj <- createJaspState(model)
         stateObj$dependOn(options = c("variables", "reverseScaledItems"))
@@ -110,6 +114,7 @@ BayesianReliability <- function(jaspResults, dataset, options) {
 	    criState <- list(scaleCri = scaleCri, itemCri  = itemCri)
 	    jaspCriState <- createJaspState(criState)
 	    jaspCriState$dependOn(options = "CredibleIntervalValue", optionsFromObject = jaspResults[["modelObj"]])
+	    jaspResults[["criObj"]] <- jaspCriState
 
 	  }
 	  model[["cri"]] <- criState
@@ -190,6 +195,9 @@ BayesianReliability <- function(jaspResults, dataset, options) {
 	}
 	if (!is.null(model[["error"]]))
 	  scaleTable$setError(model[["error"]])
+
+	if (!is.null(model[["footnote"]]))
+	  scaleTable$addFootnote(model[["footnote"]])
 
 	jaspResults[["scaleTable"]] <- scaleTable
 
@@ -394,3 +402,27 @@ BayesianReliability <- function(jaspResults, dataset, options) {
 
 }
 
+.BayesianReliabilityPosteriorPredictive <- function(jaspResults, model, options) {
+
+	if (!options[["plotPosterior"]] || !is.null(jaspResults[["OmegaPosteriorPredictive"]]))
+		return()
+
+  # browser()
+
+  relyfit <- model[["relyFit"]]
+  if (is.null(relyfit)) {
+    g <- NULL
+  } else {
+    # df <- data.frame(
+    #   x = ,
+    #   y =
+    # ),
+    g <- ggplot2::ggplot(data = df, mapping = ggplot2::aes(x = x, y = y)) +
+      geom_line() +
+      geom_point() +
+      geom_ribbon()
+  }
+  plot <- createJaspPlot(plot = g, title = "Posterior Predictive Check Omega")
+  plot$dependOn(options = c("plotPosterior", "variables", "reverseScaledItems", "CredibleIntervalValue"))
+  jaspResults[["OmegaPosteriorPredictive"]] <- plot
+}
