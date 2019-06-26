@@ -12,10 +12,9 @@
 		"requiresDataset": 	true
 	},
 
-	//"requiredPackages":	[
-	//  { "package": "Bayesrel" }
-	//],
-	"requiredPackages":	[],
+	"requiredPackages":	[
+	  { "package": "Bayesrel" }
+	],
 
 	"menu":
 	[

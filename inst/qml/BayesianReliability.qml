@@ -16,12 +16,11 @@ Form
 	Group
 	{
 		title: qsTr("Scale Statistics")
-		CheckBox {     name: "mcDonaldScale";			label: qsTr("McDonald's ω");         id: mcdonald;   checked: true}
-        CheckBox {     name: "alphaScale";				label: qsTr("Cronbach's α");         id: cronbach   		      }
-        CheckBox {     name: "gutmann2Scale";			label: qsTr("Gutmann's λ2");         id: gutmann       	          }
+		CheckBox {     name: "mcDonaldScale";			label: qsTr("McDonald's ω");         id: mcdonald;   }
+    CheckBox {     name: "alphaScale";				label: qsTr("Cronbach's α");         id: cronbach   		      }
+    CheckBox {     name: "guttman2Scale";			label: qsTr("Guttman's λ2");         id: guttman       	          }
 		CheckBox {     name: "glbScale";				label: qsTr("Greatest lower bound"); id: glb      	              }
-		CheckBox {     name: "meanScale";				label: qsTr("Mean");                 id: mean                     }
-		CheckBox {     name: "sdScale";					label: qsTr("Standard deviation");   id: sd                       }
+
 	}
        
 	Group
@@ -29,10 +28,9 @@ Form
 		title: qsTr("Individual Item Statistics")
 		CheckBox { name: "mcDonaldItem";				label: qsTr("McDonald's ω  (if item dropped)");	        enabled: mcdonald.checked }
 		CheckBox { name: "alphaItem";					label: qsTr("Cronbach's α (if item dropped)");	        enabled: cronbach.checked }
-		CheckBox { name: "gutmann2Item";				label: qsTr("Gutmann's λ2 (if item dropped)");	        enabled: gutmann.checked  }
-        CheckBox { name: "glbItem";     				label: qsTr("Greatest lower bound (if item dropped)");	enabled: glb.checked      }
-		CheckBox { name: "meanItem";					label: qsTr("Mean (if item dropped)");				    enabled: mean.checked     }
-		CheckBox { name: "sdItem";						label: qsTr("Standard deviation (if item dropped)");	enabled: sd.checked       }
+		CheckBox { name: "guttman2Item";				label: qsTr("Guttman's λ2 (if item dropped)");	        enabled: guttman.checked  }
+    CheckBox { name: "glbItem";     				label: qsTr("Greatest lower bound (if item dropped)");	enabled: glb.checked      }
+
         
 	}
 
@@ -40,16 +38,50 @@ Form
     {
         CheckBox {
                        name: "plotPosterior";           label: qsTr("Plot Posteriors");
-            CheckBox { name: "fixXRange";               label: qsTr("Fix range to 0-1"); checked: true      }
+            CheckBox { name: "dispPrior";               label: qsTr("Display Priors")}         
+            CheckBox { name: "fixXRange";               label: qsTr("Fix range to 0-1")}
+            CheckBox { name: "cutoff";               label: qsTr("Display cutoffs at"); 
+            columns: 2;
+              DoubleField
+              {
+              name: "cutoffValue1"
+              label: qsTr("")
+              defaultValue: 0.70
+              min: 0
+              max: 1
+              decimals: 2
+              fieldWidth: 40
+              }               
+              DoubleField
+              {
+              name: "cutoffValue2"
+              label: qsTr("")
+              defaultValue: 0.80
+              min: 0
+              max: 1
+              decimals: 2
+              fieldWidth: 40
+              }
+            }
         }
         CIField {      name: "CredibleIntervalValue";   label: qsTr("Credible interval")    }
     }
     
     Group
     {
-        CheckBox {
-                   name: "probTable";               label: qsTr("Probability Statistics > x");
-        CIField  { name: "probTableValue";          label: qsTr("x")                         }
+        CheckBox { name: "probTable"; label: qsTr("Probability for Reliability Statistic > x"); 
+
+        DoubleField
+        {
+            name: "probTableValue"
+            label: qsTr("x = ")
+            defaultValue: 0.70
+            min: 0
+            max: 1
+            decimals: 2
+            fieldWidth: 40
+
+        }
         CheckBox { name: "shadePlots";              label: qsTr("Shade region in plots")     }              
         }
     }
