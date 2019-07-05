@@ -16,10 +16,24 @@ Form
 	Group
 	{
 		title: qsTr("Scale Statistics")
-		CheckBox {     name: "mcDonaldScale";			label: qsTr("McDonald's ω");         id: mcdonald;   }
+		CheckBox 
+		{    
+		  name:   "mcDonaldScale"	
+		  label:  qsTr("McDonald's ω")         
+		  id:     mcdonald
+		  
+		  CheckBox 
+		  {    
+		  name:   "dispPPC"	
+		  label:  qsTr("Display posterior predictive check"); enabled: mcdonald.checked        
+	  	}
+
+		}
     CheckBox {     name: "alphaScale";				label: qsTr("Cronbach's α");         id: cronbach   		      }
     CheckBox {     name: "guttman2Scale";			label: qsTr("Guttman's λ2");         id: guttman       	          }
-		CheckBox {     name: "glbScale";				label: qsTr("Greatest lower bound"); id: glb      	              }
+		CheckBox {     name: "glbScale";				  label: qsTr("Greatest lower bound"); id: glb      	              }
+		CIField {      name: "CredibleIntervalValue";   label: qsTr("Credible interval")    }
+
 
 	}
        
@@ -38,53 +52,73 @@ Form
     {
         CheckBox {
                        name: "plotPosterior";           label: qsTr("Plot Posteriors");
-            CheckBox { name: "dispPrior";               label: qsTr("Display Priors")}         
             CheckBox { name: "fixXRange";               label: qsTr("Fix range to 0-1")}
-            CheckBox { name: "cutoff";               label: qsTr("Display cutoffs at"); 
-            columns: 2;
-              DoubleField
-              {
-              name: "cutoffValue1"
-              label: qsTr("")
+            CheckBox { name: "cutoff";               label: qsTr("Display cutoffs at")
+                columns: 2;
+                
+                DoubleField
+                {
+                  name: "cutoffValue1"
+                  label: qsTr("")
+                  defaultValue: 0.70
+                  min: 0
+                  max: 1
+                  decimals: 2
+                  fieldWidth: 40
+                }               
+                DoubleField
+                {
+                  name: "cutoffValue2"
+                  label: qsTr("")
+                  defaultValue: 0.80
+                  min: 0
+                  max: 1
+                  decimals: 2
+                  fieldWidth: 40
+                }
+            }
+            CheckBox { name: "dispPrior";               label: qsTr("Display Priors")}      
+
+        }
+    }
+    
+    Group
+    {
+        CheckBox 
+        { 
+          id:                 probTable
+          name:               "probTable"; 
+          label:              qsTr("Probability for Reliability Statistic  >")
+          childrenOnSameRow:  true
+        
+          DoubleField
+          {
+            
+              name: "probTableValue"
               defaultValue: 0.70
               min: 0
               max: 1
               decimals: 2
               fieldWidth: 40
-              }               
-              DoubleField
-              {
-              name: "cutoffValue2"
-              label: qsTr("")
-              defaultValue: 0.80
-              min: 0
-              max: 1
-              decimals: 2
-              fieldWidth: 40
-              }
+  
             }
-        }
-        CIField {      name: "CredibleIntervalValue";   label: qsTr("Credible interval")    }
-    }
-    
-    Group
-    {
-        CheckBox { name: "probTable"; label: qsTr("Probability for Reliability Statistic > x"); 
-
-        DoubleField
-        {
-            name: "probTableValue"
-            label: qsTr("x = ")
-            defaultValue: 0.70
-            min: 0
-            max: 1
-            decimals: 2
-            fieldWidth: 40
-
-        }
-        CheckBox { name: "shadePlots";              label: qsTr("Shade region in plots")     }              
-        }
-    }
+          }
+          Item
+          {
+            width:  shadePlots.width + Theme.subOptionOffset
+            height: shadePlots.height
+            
+            CheckBox 
+            { 
+              
+              id:       shadePlots
+              name:     "shadePlots";              
+              label:    qsTr("Shade region in plots"); 
+              enabled:  probTable.checked    
+              x:        Theme.subOptionOffset
+            }
+          }
+      }
 	Section
 	{
 		title: qsTr("Reverse-Scaled Items")

@@ -12,9 +12,7 @@
 		"requiresDataset": 	true
 	},
 
-	"requiredPackages":	[
-	  { "package": "Bayesrel" }
-	],
+	"requiredPackages":	["Rdpack", "Bayesrel"],
 
 	"menu":
 	[
