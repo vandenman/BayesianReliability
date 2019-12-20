@@ -1,7 +1,7 @@
 {
 	"moduleDescription" :
 	{
-		"title" : 					"Bayesian Reliability",
+		"title" : 					"Reliability",
 		"description": 			"TODO",
 		"version":					"0.1",
 		"author":						"Julius Pfadt, Don van den Bergh & Eric-Jan Wagenmakers",
@@ -17,10 +17,10 @@
 	"menu":
 	[
 		{
-			"title"   : "Bayesian Reliability",
+			"title"   : "Reliability",
 			"icon"    :	"testIcon.svg",
-			"qml"     : "BayesianReliability.qml",
-			"function": "BayesianReliability"
+			"qml"     : "Reliability.qml",
+			"function": "STReliability"
 		}
 	]
 }
