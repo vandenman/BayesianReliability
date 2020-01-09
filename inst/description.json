@@ -16,11 +16,20 @@
 
 	"menu":
 	[
+	  		{
+			"title":	"Frequentist Reliability Analysis Old",
+			"function":	"ReliabilityAnalysis",
+			"qml":		"ReliabilityAnalysis.qml"
+		},
+	  {
+			"title"   : "Frequentist Reliability Analysis",
+			"qml"     : "freqSTRel.qml",
+			"function": "freqSTReliability"
+		},
 		{
-			"title"   : "Reliability",
-			"icon"    :	"testIcon.svg",
-			"qml"     : "Reliability.qml",
-			"function": "STReliability"
+			"title"   : "Bayesian Reliability Analysis",
+			"qml"     : "BaySTRel.qml",
+			"function": "BaySTReliability"
 		}
 	]
 }

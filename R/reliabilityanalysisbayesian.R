@@ -1,4 +1,4 @@
-STReliability <- function(jaspResults, dataset, options) {
+BaySTReliability <- function(jaspResults, dataset, options) {
 
   #.libPaths("/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
   # print(.libPaths())
@@ -16,9 +16,7 @@ STReliability <- function(jaspResults, dataset, options) {
 	model <- .BayesianReliabilityMainResults(jaspResults, dataset, options)
 
 	.BayesianReliabilityScaleTable(         jaspResults, model, options)
-	.BayesianReliabilityScaleTableF(         jaspResults, model, options)
 	.BayesianReliabilityItemTable(          jaspResults, model, options)
-	.BayesianReliabilityItemTableF(          jaspResults, model, options)
 	.BayesianReliabilityProbTable(          jaspResults, model, options)
 	.BayesianReliabilityPosteriorPlot(      jaspResults, model, options)
 	.BayesianReliabilityPosteriorPredictive(jaspResults, model, options)
@@ -32,15 +30,18 @@ STReliability <- function(jaspResults, dataset, options) {
 
   # order of appearance in Bayesrel
   derivedOptions <- list(
-    selectedEstimators  = unlist(options[c("alphaScale", "guttman2Scale", "glbScale", "mcDonaldScale")]),
-    itemDroppedSelected = unlist(options[c("mcDonaldItem", "alphaItem", "guttman2Item", "glbItem")]),
-    selectedEstimatorsF  = unlist(options[c("alphaScalef", "guttman2Scalef", "glbScalef", "mcDonaldScalef")]),
-    itemDroppedSelectedF = unlist(options[c("mcDonaldItemf", "alphaItemf", "guttman2Itemf", "glbItemf")]),
+    selectedEstimators  = unlist(options[c("alphaScale", "guttman2Scale", "glbScale", 
+                                           "mcDonaldScale")]),
+    itemDroppedSelected = unlist(options[c("mcDonaldItem", "alphaItem", "guttman2Item", 
+                                           "glbItem")]),
+
     namesEstimators     = list(
-      tables = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", "McDonald's \u03C9"),
-      plots = list(expression("Cronbach\'s"~alpha), expression("Guttman's"~lambda[2]), "Greatest Lower Bound",
-                   expression("McDonald's"~omega))
+      tables = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
+                 "McDonald's \u03C9"),
+      plots = list(expression("Cronbach\'s"~alpha), expression("Guttman's"~lambda[2]), 
+                   "Greatest Lower Bound", expression("McDonald's"~omega))
     )
+
   )
   # order to show in JASP
   derivedOptions[["order"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2",
@@ -70,7 +71,7 @@ STReliability <- function(jaspResults, dataset, options) {
 
 # estimate reliability ----
 .BayesianReliabilityMainResults <- function(jaspResults, dataset, options) {
-
+  
   model <- jaspResults[["modelObj"]]$object
   relyFit <- model[["relyFit"]]
   if (is.null(model)) {
@@ -89,8 +90,8 @@ STReliability <- function(jaspResults, dataset, options) {
 
       model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "glb", "omega"), 
-                                     n.iter = options[["noSamples"]], boot.n = options[["noSamplesf"]],
-                                     item.dropped = TRUE, omega.freq.method = "pa"))
+                                     n.iter = options[["noSamples"]], freq = F,
+                                     item.dropped = TRUE))
       # Consider stripping some of the contents of relyFit to reduce memory load
       if (inherits(relyFit, "try-error")) {
 
@@ -108,7 +109,7 @@ STReliability <- function(jaspResults, dataset, options) {
         model[["relyFit"]] <- relyFit
 
         stateObj <- createJaspState(model)
-        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamples", "noSamplesf"))
+        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamples"))
         jaspResults[["modelObj"]] <- stateObj
       }
     }
@@ -118,29 +119,21 @@ STReliability <- function(jaspResults, dataset, options) {
 
 	if (is.null(model[["error"]])) {
 	  criState <- jaspResults[["criObj"]]$object
-	  cfiState <- jaspResults[["cfiObj"]]$object
-	  if (is.null(criState) && is.null(cfiState) && !is.null(relyFit)) {
+	  if (is.null(criState) && !is.null(relyFit)) {
 
 	    scaleCri <- .BayesianReliabilityCalcCri(relyFit[["bay"]][["samp"]],             
 	                                            options[["CredibleIntervalValue"]])
 	    itemCri  <- .BayesianReliabilityCalcCri(relyFit[["bay"]][["ifitem"]][["samp"]], 
 	                                            options[["CredibleIntervalValue"]])
-	    
-	    scaleCfi <- .BayesianReliabilityCalcCfi(relyFit[["freq"]][["boot"]],             
-	                                            options[["ConfidenceIntervalValue"]])
+
 	    
 	    criState <- list(scaleCri = scaleCri, itemCri  = itemCri)
-	    cfiState <- list(scaleCfi = scaleCfi)
 	    jaspCriState <- createJaspState(criState)
-	    jaspCfiState <- createJaspState(cfiState)
 	    jaspCriState$dependOn(options = "CredibleIntervalValue", optionsFromObject = jaspResults[["modelObj"]])
-	    jaspCfiState$dependOn(options = "ConfidenceIntervalValue", optionsFromObject = jaspResults[["modelObj"]])
 	    jaspResults[["criObj"]] <- jaspCriState
-	    jaspResults[["cfiObj"]] <- jaspCfiState
-	    
+
 	  }
 	  model[["cri"]] <- criState
-	  model[["cfi"]] <- cfiState
 	}
 
   model[["derivedOptions"]] <- .BayesianReliabilityDerivedOptions(options)
@@ -150,7 +143,7 @@ STReliability <- function(jaspResults, dataset, options) {
 }
 
 .BayesianReliabilityCalcCri <- function(samps, criValue) {
-  
+
   cri <- vector("list", length(samps))
   names(cri) <- names(samps)
   
@@ -160,17 +153,6 @@ STReliability <- function(jaspResults, dataset, options) {
   return(cri)
 }
 
-.BayesianReliabilityCalcCfi <- function(boot, cfiValue) {
-  
-  cfi <- vector("list", length(boot))
-  names(cfi) <- names(boot)
-  
-  for (nm in names(boot)) {
-    cfi[[nm]] <- quantile(boot[[nm]], prob = c(0+(1-cfiValue)/2, 1-(1-cfiValue)/2))
-    names(cfi[[nm]]) <- c("lower", "upper")
-  }
-  return(cfi)
-}
 
 .BayesianReliabilityCheckLoadings <- function(dataset, variables) {
 
@@ -193,8 +175,8 @@ STReliability <- function(jaspResults, dataset, options) {
   }
 
   scaleTable <- createJaspTable("Bayesian Scale Reliability Statistics")
-  scaleTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", "glbScale", "meanScale",
-                                  "sdScale", "reverseScaledItems", "CredibleIntervalValue", "noSamples"))
+  scaleTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", 
+                                  "glbScale", "reverseScaledItems", "CredibleIntervalValue", "noSamples"))
 
   overTitle <- sprintf("%s%% Credible interval",
                        format(100*options[["CredibleIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -240,60 +222,6 @@ STReliability <- function(jaspResults, dataset, options) {
 	return()
 }
 
-.BayesianReliabilityScaleTableF <- function(jaspResults, model, options) {
-  
-  if (!is.null(jaspResults[["scaleTableF"]])) {
-    print("jaspResults[['scaleTable']] from state")
-    return()
-  }
-  
-  scaleTableF <- createJaspTable("Frequentist Scale Reliability Statistics")
-  scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "glbScalef", "meanScale",
-                                  "sdScale", "reverseScaledItems", "ConfidenceIntervalValue", "noSamplesf"))
-  
-  overTitle <- sprintf("%s%% Confidence interval",
-                       format(100*options[["ConfidenceIntervalValue"]], digits = 3, drop0trailing = TRUE))
-  scaleTableF$addColumnInfo(name = "statistic", title = "Statistic",        type = "string")
-  scaleTableF$addColumnInfo(name = "pointEst",  title = "Point Estimate", type = "number")
-  scaleTableF$addColumnInfo(name = "lower",     title = "Lower",            type = "number", overtitle = overTitle)
-  scaleTableF$addColumnInfo(name = "upper",     title = "Upper",            type = "number", overtitle = overTitle)
-  
-  relyFit <- model[["relyFit"]]
-  derivedOptions <- model[["derivedOptions"]]
-  opts     <- derivedOptions[["namesEstimators"]][["tables"]]
-  order    <- derivedOptions[["order"]]
-  selected <- derivedOptions[["selectedEstimatorsF"]]
-  
-  if (!is.null(relyFit)) {
-    allData <- cbind.data.frame(
-      statistic = opts,
-      pointEst = unlist(relyFit$freq$est, use.names = FALSE),
-      do.call(rbind, model[["cfi"]][["scaleCfi"]])
-    )[order, ][selected[order], ] # TODO: <- simplify this
-    
-    scaleTableF$setData(allData)
-    
-    if (!is.null(model[["footnotes"]]))
-      scaleTableF$addFootnote(model[["footnotes"]])
-    
-  } else if (sum(selected) > 0L) {
-    
-    scaleTableF[["statistic"]] <- opts[order][selected[order]]
-    
-    nvar <- length(options[["variables"]])
-    if (nvar > 0L && nvar < 3L)
-      scaleTableF$addFootnote("Please enter at least 3 variables to do an analysis.")
-  }
-  if (!is.null(model[["error"]]))
-    scaleTableF$setError(model[["error"]])
-  
-  if (!is.null(model[["footnote"]]))
-    scaleTableF$addFootnote(model[["footnote"]])
-  
-  jaspResults[["scaleTableF"]] <- scaleTableF
-  
-  return()
-}
 
 .BayesianReliabilityItemTable <- function(jaspResults, model, options) {
 
@@ -305,23 +233,24 @@ STReliability <- function(jaspResults, dataset, options) {
   derivedOptions <- model[["derivedOptions"]]
   itemDroppedSelected <- derivedOptions[["itemDroppedSelected"]]
   order <- derivedOptions[["order"]]
-  overTitles <- derivedOptions[["namesEstimators"]][["tables"]][order]
-
+  overTitles <- format(derivedOptions[["namesEstimators"]][["tables"]][order], digits = 3, drop0trailing = T)
+  
+  cred <- format(100*options[["CredibleIntervalValue"]], digits = 3, drop0trailing = TRUE)
   itemTable <- createJaspTable("Bayesian If Item Dropped Scale Reliability Statistics")
   itemTable$dependOn(options = c("variables",
-                                 "mcDonaldScale", "alphaScale", "guttman2Scale", "glbScale", "meanScale", "sdScale",
-                                 "mcDonaldItem",  "alphaItem",  "guttman2Item",  "glbItem",  "meanItem",  "sdItem",
-                                 "reverseScaledItems"))
-  itemTable$addColumnInfo(name = "variable", title = "if item dropped", type = "string")
+                                 "mcDonaldScale", "alphaScale", "guttman2Scale", "glbScale", 
+                                 "mcDonaldItem",  "alphaItem",  "guttman2Item", "glbItem",
+                                 "reverseScaledItems", "CredibleIntervalValue"))
+  itemTable$addColumnInfo(name = "variable", title = "item dropped", type = "string")
 
   idxSelected <- which(itemDroppedSelected)
 
     for (i in idxSelected) {
     itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
                             overtitle = overTitles[i])
-    itemTable$addColumnInfo(name = paste0("lower", i),    title = "Lower",      type = "number", 
+    itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
                             overtitle = overTitles[i])
-    itemTable$addColumnInfo(name = paste0("upper", i),    title = "Upper",      type = "number", 
+    itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Lower ", cred, "%"), type = "number", 
                             overtitle = overTitles[i])
   }
 
@@ -345,51 +274,6 @@ STReliability <- function(jaspResults, dataset, options) {
 	return()
 }
 
-.BayesianReliabilityItemTableF <- function(jaspResults, model, options) {
-  
-  if (!is.null(jaspResults[["itemTableF"]]) || !any(model[["derivedOptions"]][["itemDroppedSelectedF"]])) {
-    print("jaspResults[['hasItemTable']] from state or not wanted")
-    return()
-  }
-  
-  derivedOptions <- model[["derivedOptions"]]
-  itemDroppedSelectedF <- derivedOptions[["itemDroppedSelectedF"]]
-  order <- derivedOptions[["order"]]
-  overTitles <- derivedOptions[["namesEstimators"]][["tables"]][order]
-  
-  itemTableF <- createJaspTable("Frequentist If Item Dropped Scale Reliability Statistics")
-  itemTableF$dependOn(options = c("variables",
-                                 "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "glbScalef", "meanScalef", "sdScale",
-                                 "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf",  "glbItemf",  "meanItem",  "sdItem",
-                                 "reverseScaledItems"))
-  itemTableF$addColumnInfo(name = "variable", title = "if item dropped", type = "string")
-  
-  idxSelectedF <- which(itemDroppedSelectedF)
-  
-  for (i in idxSelectedF) {
-    itemTableF$addColumnInfo(name = paste0("pointEst", i), title = "Point Estimate", type = "number", 
-                            overtitle = overTitles[i])
-
-  }
-  
-  relyFit <- model[["relyFit"]]
-  if (!is.null(relyFit)) {
-    tb <- data.frame(variable = model[["itemsDropped"]])
-    for (i in idxSelectedF) {
-      idx <- order[i]
-      newtb <- cbind(pointEst = relyFit$freq$ifitem[[idx]])
-      colnames(newtb) <- paste0(colnames(newtb), i)
-      tb <- cbind(tb, newtb)
-    }
-    itemTableF$setData(tb)
-    
-  } else if (length(model[["itemsDropped"]]) > 0) {
-    itemTableF[["variables"]] <- model[["itemsDropped"]]
-  }
-  
-  jaspResults[["itemTableF"]] <- itemTableF
-  return()
-}
 
 
 .BayesianReliabilityProbTable <- function(jaspResults, model, options) {
@@ -401,10 +285,14 @@ STReliability <- function(jaspResults, dataset, options) {
 
   probTable <- createJaspTable(sprintf("Probability that Reliability Statistic is Larger than %.2f", 
                                        options[["probTableValue"]]))
-  probTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", "glbScale", "meanScale",
-                                  "sdScale", "reverseScaledItems", "probTableValue", "probTable"))
+  probTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale",
+                                 "glbScale", "reverseScaledItems", "probTableValue", "probTable"))
+  overTitle <- format("Probability",
+                      digits = 3, drop0trailing = T)
   probTable$addColumnInfo(name = "statistic", title = "Statistic",   type = "string")
-	probTable$addColumnInfo(name = "probs",     title = "Probability", type = "number")
+	probTable$addColumnInfo(name = "prior",     title = "Prior", type = "number", overtitle = overTitle )
+	probTable$addColumnInfo(name = "posterior", title = "Posterior", type = "number", overtitle = overTitle )
+	
 
   relyFit <- model[["relyFit"]]
 	derivedOptions <- model[["derivedOptions"]]
@@ -412,14 +300,23 @@ STReliability <- function(jaspResults, dataset, options) {
 	order    <- derivedOptions[["order"]]
 	selected <- derivedOptions[["selectedEstimators"]]
 	idx      <- which(selected)
-
-  if (!is.null(relyFit)) {
-    probs <- numeric(sum(selected))
-
+  
+	n.item <- dim(relyFit$bay$covsamp)[2]
+	prior <- priors[[as.character(n.item)]] 
+  end <- length(prior[[1]][["x"]])
+  pos <- end - sum(prior[[1]][["x"]] > options[["probTableValue"]]) 
+  # since the priors are only available in density form, the prior probability for the estimator being larger than
+  # a cutoff is given by caculating the relative probability of the density from the cutoff to 1.
+  # maybe check this with Don though
+  
+	if (!is.null(relyFit)) {
+    probsPost <- numeric(sum(selected))
+    probsPrior <- numeric(sum(selected))
     for (i in seq_along(idx)) {
-      probs[i] <- mean(relyFit[["bay"]][["samp"]][[idx[i]]] > options[["probTableValue"]])
+      probsPost[i] <- mean(relyFit[["bay"]][["samp"]][[idx[i]]] > options[["probTableValue"]])
+      probsPrior[i] <- sum(prior[[idx[i]]][["y"]][pos:end]) / sum(prior[[idx[i]]][["y"]])
     }
-    df <- data.frame(statistic = opts[idx], probs = probs)
+    df <- data.frame(statistic = opts[idx], prior = probsPrior, posterior = probsPost)
     probTable$setData(df)
   } else if (sum(selected) > 0) {
     probTable[["statistic"]] <- opts[idx]
@@ -458,7 +355,7 @@ STReliability <- function(jaspResults, dataset, options) {
 	scaleCri <- model[["cri"]][["scaleCri"]][order]
 	relyFit[["bay"]][["samp"]] <- relyFit[["bay"]][["samp"]][order]
 	n.item <- dim(relyFit$bay$covsamp)[2]
-	prior <- priors[[as.character(n.item)]][c(4, 1, 2, 3)]
+	prior <- priors[[as.character(n.item)]][c(4, 1, 2, 3)] ##### change this when more estiamtors are included!!!
 
 
 	if (options[["shadePlots"]] && options[["probTable"]]) {

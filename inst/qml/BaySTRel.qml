@@ -14,7 +14,7 @@ Form
   	
   	Section
     {
-      title: qsTr("Bayesian Single-Test Reliability")
+      title: qsTr("Single-Test Reliability")
     	Group
     	{
     		title: qsTr("Scale Statistics")
@@ -27,7 +27,8 @@ Form
     		  CheckBox 
     		  {    
     		  name:   "dispPPC"	
-    		  label:  qsTr("Display posterior predictive check"); enabled: mcdonald.checked        
+    		  label:  qsTr("Posterior predictive check"); 
+    		  enabled: mcdonald.checked        
     	  	}
     
     		}
@@ -41,7 +42,13 @@ Form
         {     
           name: "guttman2Scale";			
           label: qsTr("Guttman's λ2");        
-          id: guttman      
+          id: guttman2      
+          }
+        CheckBox 
+        {     
+          name: "guttman6Scale";			
+          label: qsTr("Guttman's λ6");        
+          id: guttman6      
           }
     		CheckBox 
     		{     
@@ -76,7 +83,13 @@ Form
     		{ 
     		  name: "guttman2Item";				
     		  label: qsTr("Guttman's λ2 (if item dropped)");	        
-    		  enabled: guttman.checked  
+    		  enabled: guttman2.checked  
+    		  }
+    		CheckBox 
+    		{ 
+    		  name: "guttman6Item";				
+    		  label: qsTr("Guttman's λ6 (if item dropped)");	        
+    		  enabled: guttman6.checked  
     		  }
         CheckBox 
         { 
@@ -139,7 +152,7 @@ Form
               name:               "probTable"; 
               label:              qsTr("Probability for Reliability Statistic  >")
               childrenOnSameRow:  true
-            
+              
               DoubleField
               {
                 
@@ -150,13 +163,13 @@ Form
                   decimals: 2
                   fieldWidth: 40
       
-                }
               }
+              
               Item
               {
-                width:  shadePlots.width + Theme.subOptionOffset
-                height: shadePlots.height
-                
+              width:  shadePlots.width + Theme.subOptionOffset
+              height: shadePlots.height
+              
                 CheckBox 
                 { 
                   id:       shadePlots
@@ -166,81 +179,11 @@ Form
                   x:        Theme.subOptionOffset
                 }
               }
+            }
           }
       }
       
-      
-    Section
-    {
-      title: qsTr("Frequentist Single-Test Reliability")
-    	Group
-    	{
-    		title: qsTr("Scale Statistics")
-    		CheckBox 
-    		{    
-    		  name:   "mcDonaldScalef"	
-    		  label:  qsTr("McDonald's ω")         
-    		  id:     mcdonaldf
-    		  }
-        CheckBox 
-        {     
-          name: "alphaScalef";				
-          label: qsTr("Cronbach's α");         
-          id: cronbachf   		      
-          }
-        CheckBox 
-        {     
-          name: "guttman2Scalef";			
-          label: qsTr("Guttman's λ2");         
-          id: guttmanf       	          
-          }
-    		CheckBox 
-    		{     
-    		  name: "glbScalef";				  
-    		  label: qsTr("Greatest lower bound"); 
-    		  id: glbf      	              
-    		  }
-    		CIField 
-    		{      
-    		  name: "ConfidenceIntervalValue";   
-    		  label: qsTr("Confidence interval")    
-    		  }
-    
-    
-    	}
-           
-    	Group
-    	{
-    		title: qsTr("Individual Item Statistics")
-    		CheckBox 
-    		{ 
-    		  name: "mcDonaldItemf";				
-    		  label: qsTr("McDonald's ω  (if item dropped)");	        
-    		  enabled: mcdonaldf.checked 
-    		  }
-    		CheckBox 
-    		{ 
-    		  name: "alphaItemf";				
-    		  label: qsTr("Cronbach's α (if item dropped)");	     
-    		  enabled: cronbachf.checked 
-    		  }
-    		CheckBox 
-    		{ 
-    		  name: "guttman2Itemf";			
-    		  label: qsTr("Guttman's λ2 (if item dropped)");	       
-    		  enabled: guttmanf.checked  
-    		  }
-        CheckBox 
-        { 
-          name: "glbItemf";     		
-          label: qsTr("Greatest lower bound (if item dropped)");	
-          enabled: glbf.checked     
-          }
-    
-            
-    	}
-        
-      }
+  
 	Section
 	{
 		title: qsTr("Reverse-Scaled Items")
@@ -265,14 +208,6 @@ Form
             min: 100
             max: 1e7
         }
-        IntegerField
-        {
-            name: "noSamplesf"
-            label: qsTr("No. of bootstrap samples")
-            defaultValue: 500
-            fieldWidth: 50
-            min: 100
-            max: 1e7
-        }
+
     }
 }

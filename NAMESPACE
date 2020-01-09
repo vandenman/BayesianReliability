@@ -1,3 +1,5 @@
-export(STReliability)
+export(ReliabilityAnalysis)
+export(freqSTReliability)
+export(BaySTReliability)
   import('Rdpack');
   import('Bayesrel');
