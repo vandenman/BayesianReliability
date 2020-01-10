@@ -208,6 +208,12 @@ Form
             min: 100
             max: 1e7
         }
+//        RadioButtonGroup {
+//            title: qsTr("Missing Values")
+//            name: "missingValues"
+//            RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise"); checked: true	}
+//            RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise")					}
+//        }
 
     }
 }
