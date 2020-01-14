@@ -110,6 +110,10 @@ Form
               name: "fixXRange";               
               label: qsTr("Fix range to 0-1")
               }
+            CheckBox { 
+              name: "dispPrior";               
+              label: qsTr("Display Priors")
+              }
             CheckBox 
             { 
               name: "cutoff";               
@@ -137,10 +141,6 @@ Form
                 fieldWidth: 40
                 }
               }
-              CheckBox { 
-                name: "dispPrior";               
-                label: qsTr("Display Priors")
-                }      
             }
         }
         
@@ -157,27 +157,27 @@ Form
               {
                 
                   name: "probTableValue"
-                  defaultValue: 0.70
+                  defaultValue: 0.80
                   min: 0
                   max: 1
                   decimals: 2
                   fieldWidth: 40
       
               }
-              
-              Item
-              {
+            }
+            Item
+            {
               width:  shadePlots.width + Theme.subOptionOffset
               height: shadePlots.height
               
-                CheckBox 
-                { 
-                  id:       shadePlots
-                  name:     "shadePlots";              
-                  label:    qsTr("Shade region in plots"); 
-                  enabled:  probTable.checked    
-                  x:        Theme.subOptionOffset
-                }
+              CheckBox 
+              { 
+                indent:   true
+                id:       shadePlots
+                name:     "shadePlots";              
+                label:    qsTr("Shade region in plots"); 
+                enabled:  probTable.checked    
+                x:        Theme.subOptionOffset
               }
             }
           }

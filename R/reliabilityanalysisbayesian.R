@@ -468,7 +468,7 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 	if (priorTrue) {
 	  # g <- g + ggplot2::geom_hline(yintercept = 1)
 	  g <- g + ggplot2::geom_line(data = datPrior, mapping = ggplot2::aes(x = x, y = y),
-	                              linetype = 3, size = .85) +
+	                              linetype = "dashed", size = .85) +
 	           ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand,
 	                                       limits= c(min(xBreaks), max(xBreaks)))
 	           # ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand, 
@@ -477,14 +477,23 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 
 	  
 	}
-	
+
 	if (!is.null(cutoffs)) {
-	  g <- g +
-	    ggplot2::geom_segment(ggplot2::aes(x = cutoffs[1], y = 0, xend = cutoffs[1], yend = max(d$y)), 
+	  cut1_peak <- d$y[findInterval(cutoffs[1], d$x)]
+	  cut2_peak <- d$y[findInterval(cutoffs[2], d$x)]
+	  if (length(cut1_peak) != 0 & findInterval(cutoffs[1], d$x) != 2^10) {
+	    g <- g +
+	      ggplot2::geom_segment(ggplot2::aes(x = cutoffs[1], y = 0, xend = cutoffs[1], yend = cut1_peak), 
+	                            color = "grey60", linetype = 1, alpha = .5, size = .3) +
+	      ggplot2::geom_line(size = .85)
+	    
+	  } 
+	  if (length(cut2_peak) != 0 & findInterval(cutoffs[2], d$x) != 2^10) {
+	    g <- g +
+	      ggplot2::geom_segment(ggplot2::aes(x = cutoffs[2], y = 0, xend = cutoffs[2], yend = cut2_peak), 
 	                          color = "grey60", linetype = 1, alpha = .5, size = .3) +
-	    ggplot2::geom_segment(ggplot2::aes(x = cutoffs[2], y = 0, xend = cutoffs[2], yend = max(d$y)), 
-	                          color = "grey60", linetype = 1, alpha = .5, size = .3) +
-	    ggplot2::geom_line(size = .85)
+	      ggplot2::geom_line(size = .85)
+	  }
 	}
 	
 
