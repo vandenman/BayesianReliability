@@ -18,19 +18,30 @@ freqSTReliability <- function(jaspResults, dataset, options) {
   
   # order of appearance in Bayesrel
   derivedOptions <- list(
-    selectedEstimatorsF  = unlist(options[c("alphaScalef", "guttman2Scalef", "glbScalef", "mcDonaldScalef")]),
-    itemDroppedSelectedF = unlist(options[c("mcDonaldItemf", "alphaItemf", "guttman2Itemf", "glbItemf")]),
+    selectedEstimatorsF  = unlist(options[c("alphaScalef", "guttman2Scalef", "glbScalef", "mcDonaldScalef", 
+                                            "averageInterItemCor", "meanScale", "sdScale")]),
+    itemDroppedSelectedF = unlist(options[c("mcDonaldItemf", "alphaItemf", "guttman2Itemf", "glbItemf",
+                                            "itemRestCor", "meanItem", "sdItem")]),
     namesEstimators     = list(
       tables = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
-                 "McDonald's \u03C9"),
+                 "McDonald's \u03C9", "Average interitem correlation", "mean", "sd"),
+      tables_item = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
+                 "McDonald's \u03C9", "Item-rest correlation", "mean", "sd"),
+      coefficients = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
+                       "McDonald's \u03C9"),
       plots = list(expression("Cronbach\'s"~alpha), expression("Guttman's"~lambda[2]), 
                   "Greatest Lower Bound", expression("McDonald's"~omega))
     )
   )
   # order to show in JASP
   derivedOptions[["order"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", 
-                                       "Guttman's \u03BB2", "Greatest Lower Bound"), 
+                                       "Guttman's \u03BB2", "Greatest Lower Bound",
+                                       "Average interitem correlation", "mean", "sd"), 
                                      derivedOptions[["namesEstimators"]][["tables"]])
+  derivedOptions[["order_item"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", 
+                                       "Guttman's \u03BB2", "Greatest Lower Bound",
+                                       "Item-rest correlation", "mean", "sd"), 
+                                     derivedOptions[["namesEstimators"]][["tables_item"]])
   
   
   return(derivedOptions)
@@ -77,6 +88,32 @@ freqSTReliability <- function(jaspResults, dataset, options) {
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "glb", "omega"), 
                                      n.iter = 250, boot.n = options[["noSamplesf"]],
                                      item.dropped = TRUE, omega.freq.method = "pa", ))
+      
+      # add the old funtionality here, beware of missings!!!
+      # first the scale statistics
+      cordat <- cor(dataset)
+      relyFit$freq$est$avg_cor <- mean(cordat[lower.tri(cordat)])
+      relyFit$freq$est$mean <- mean(dataset)
+      relyFit$freq$est$sd <- sd(apply(dataset, 2, mean))
+      
+      corsamp <- apply(relyFit$freq$covsamp, c(1), cov2cor)
+      relyFit$freq$boot$avg_cor <- apply(corsamp, 2, function(x) mean(x[x!=1]))
+      relyFit$freq$boot$mean <- 0
+      relyFit$freq$boot$sd <- 0
+      
+      
+      # now the item statistics
+      relyFit$freq$ifitem$ircor <- NULL
+      
+      for (i in 1:ncol(dataset)) {
+        idx <- seq(1, ncol(dataset))
+        idx <- idx[idx!=i]
+        relyFit$freq$ifitem$ircor[i] <- cor(dataset[, i], apply(dataset[, idx], 1, mean))
+      }
+      relyFit$freq$ifitem$mean <- apply(dataset, 2, mean)
+      relyFit$freq$ifitem$sd <- apply(dataset, 2, sd)  
+      
+      
       # Consider stripping some of the contents of relyFit to reduce memory load
       if (inherits(relyFit, "try-error")) {
         
@@ -125,6 +162,7 @@ freqSTReliability <- function(jaspResults, dataset, options) {
   names(cfi) <- names(boot)
   
   for (nm in names(boot)) {
+
     cfi[[nm]] <- quantile(boot[[nm]], prob = c(0+(1-cfiValue)/2, 1-(1-cfiValue)/2))
     names(cfi[[nm]]) <- c("lower", "upper")
   }
@@ -155,7 +193,8 @@ freqSTReliability <- function(jaspResults, dataset, options) {
   
   scaleTableF <- createJaspTable("Frequentist Scale Reliability Statistics")
   scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef",
-                                   "glbScalef", "reverseScaledItems", "ConfidenceIntervalValue", "noSamplesf"))
+                                   "glbScalef", "reverseScaledItems", "ConfidenceIntervalValue", "noSamplesf", 
+                                   "averageInterItemCor", "meanScale", "sdScale"))
   
   overTitle <- sprintf("%s%% Confidence interval",
                        format(100*options[["ConfidenceIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -170,6 +209,7 @@ freqSTReliability <- function(jaspResults, dataset, options) {
   order    <- derivedOptions[["order"]]
   selected <- derivedOptions[["selectedEstimatorsF"]]
   
+
   if (!is.null(relyFit)) {
     allData <- cbind.data.frame(
       statistic = opts,
@@ -212,22 +252,27 @@ freqSTReliability <- function(jaspResults, dataset, options) {
   
   derivedOptions <- model[["derivedOptions"]]
   itemDroppedSelectedF <- derivedOptions[["itemDroppedSelectedF"]]
-  order <- derivedOptions[["order"]]
-  overTitles <- derivedOptions[["namesEstimators"]][["tables"]][order]
+  order <- derivedOptions[["order_item"]]
+  estimators <- derivedOptions[["namesEstimators"]][["tables_item"]][order]
+  overTitle <- "If item dropped"
   
-  itemTableF <- createJaspTable("Frequentist If Item Dropped Scale Reliability Statistics")
+  itemTableF <- createJaspTable("Frequentist Individual Item Reliability Statistics")
   itemTableF$dependOn(options = c("variables",
                                   "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "glbScalef", 
+                                  "averageInterItemCor", "meanScale", "sdScale",
                                   "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf", "glbItemf",
-                                  "reverseScaledItems"))
-  itemTableF$addColumnInfo(name = "variable", title = "item dropped", type = "string")
+                                  "reverseScaledItems", "meanItem", "sdItem", "itemRestCor"))
+  itemTableF$addColumnInfo(name = "variable", title = "Item", type = "string")
   
   idxSelectedF <- which(itemDroppedSelectedF)
-  
+  coefficients <- derivedOptions[["namesEstimators"]][["coefficients"]]
   for (i in idxSelectedF) {
-    itemTableF$addColumnInfo(name = paste0("pointEst", i), title = "Point Estimate", type = "number", 
-                             overtitle = overTitles[i])
-    
+    if (estimators[i] %in% coefficients) {
+      itemTableF$addColumnInfo(name = paste0("pointEst", i), title = estimators[i], type = "number", 
+                               overtitle = overTitle)
+    } else {
+      itemTableF$addColumnInfo(name = paste0("pointEst", i), title = estimators[i], type = "number")
+    }
   }
   
   relyFit <- model[["relyFit"]]

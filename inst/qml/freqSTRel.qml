@@ -43,24 +43,27 @@ Form
         label: qsTr("Guttman's λ2");         
         id: guttman2f       	          
       }
-      CheckBox 
-      {     
-        name: "guttman6Scalef";			
-        label: qsTr("Guttman's λ6");         
-        id: guttman6f       	          
-      }
+//      CheckBox 
+  //    {     
+//        name: "guttman6Scalef";			
+//        label: qsTr("Guttman's λ6");         
+//        id: guttman6f       	          
+//      }
       CheckBox 
       {     
         name: "glbScalef";				  
         label: qsTr("Greatest lower bound"); 
         id: glbf      	              
       }
+      CheckBox { name: "averageInterItemCor";				label: qsTr("Average interitem correlation")	}
+
       CIField 
       {      
         name: "ConfidenceIntervalValue";   
         label: qsTr("Confidence interval")    
       }
-      
+      CheckBox { name: "meanScale";						label: qsTr("Mean")							}
+      CheckBox { name: "sdScale";							label: qsTr("Standard deviation")			}
       
     }
     
@@ -87,16 +90,13 @@ Form
       }
       CheckBox 
       { 
-        name: "guttman6Itemf";			
-        label: qsTr("Guttman's λ6 (if item dropped)");	       
-        enabled: guttman6f.checked  
-      }
-      CheckBox 
-      { 
         name: "glbItemf";     		
         label: qsTr("Greatest lower bound (if item dropped)");	
         enabled: glbf.checked     
-      }
+      }    
+      CheckBox { name: "itemRestCor";						label: qsTr("Item-rest correlation")				}
+      CheckBox { name: "meanItem";						label: qsTr("Mean")								}
+      CheckBox { name: "sdItem";							label: qsTr("Standard deviation")				}
       
       
     }

@@ -30,14 +30,18 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 
   # order of appearance in Bayesrel
   derivedOptions <- list(
-    selectedEstimators  = unlist(options[c("alphaScale", "guttman2Scale", "glbScale", 
-                                           "mcDonaldScale")]),
-    itemDroppedSelected = unlist(options[c("mcDonaldItem", "alphaItem", "guttman2Item", 
-                                           "glbItem")]),
+    selectedEstimators  = unlist(options[c("alphaScale", "guttman2Scale", "glbScale", "mcDonaldScale",
+                                           "averageInterItemCor", "meanScale", "sdScale")]),
+    itemDroppedSelected = unlist(options[c("mcDonaldItem", "alphaItem", "guttman2Item", "glbItem",
+                                           "itemRestCor", "meanItem", "sdItem")]),
 
     namesEstimators     = list(
       tables = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
-                 "McDonald's \u03C9"),
+                 "McDonald's \u03C9", "Average interitem correlation", "mean", "sd"),
+      tables_item = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
+                 "McDonald's \u03C9", "Item-rest correlation", "mean", "sd"),
+      coefficients = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Greatest Lower Bound", 
+                       "McDonald's \u03C9", "Item-rest correlation"),
       plots = list(expression("Cronbach\'s"~alpha), expression("Guttman's"~lambda[2]), 
                    "Greatest Lower Bound", expression("McDonald's"~omega))
     )
@@ -45,7 +49,11 @@ BaySTReliability <- function(jaspResults, dataset, options) {
   )
   # order to show in JASP
   derivedOptions[["order"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2",
-                                       "Greatest Lower Bound"), derivedOptions[["namesEstimators"]][["tables"]])
+                                       "Greatest Lower Bound", "Average interitem correlation", "mean", "sd"), 
+                                     derivedOptions[["namesEstimators"]][["tables"]])
+  derivedOptions[["order_item"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2",
+                                       "Greatest Lower Bound", "Item-rest correlation", "mean", "sd"), 
+                                     derivedOptions[["namesEstimators"]][["tables_item"]])
 
 
   return(derivedOptions)
@@ -92,6 +100,28 @@ BaySTReliability <- function(jaspResults, dataset, options) {
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], freq = F,
                                      item.dropped = TRUE))
+      
+      # add the scale info
+      corsamp <- apply(relyFit$bay$covsamp, 1, cov2cor)
+      relyFit$bay$samp$avg_cor <- coda::mcmc(apply(corsamp, 2, function(x) mean(x[x!=1])))
+      relyFit$bay$est$avg_cor <- median(relyFit$bay$samp$avg_cor)
+      
+      relyFit$bay$samp$mean <- coda::mcmc(c(0, 0))
+      relyFit$bay$est$mean <- mean(dataset)
+      relyFit$bay$samp$sd <- coda::mcmc(c(0, 0))
+      relyFit$bay$est$sd <- sd(apply(dataset, 2, mean))
+      
+      # now the item statistics
+      ###### how to do this? I dont know, the item-rest correlation needs some thinking, mean and sd are straightforward 
+      relyFit$bay$ifitem$samp$ircor <- .reliabilityItemRestCor(dataset, options[["noSamples"]])
+      relyFit$bay$ifitem$est$ircor <- apply(relyFit$bay$ifitem$samp$ircor, 1, median)
+      
+      relyFit$bay$ifitem$est$mean <- apply(dataset, 2, mean)
+      relyFit$bay$ifitem$est$sd <- apply(dataset, 2, sd)  
+      relyFit$bay$ifitem$samp$mean <- coda::mcmc(matrix(0, ncol(dataset), 2))
+      relyFit$bay$ifitem$samp$sd <- coda::mcmc(matrix(0, ncol(dataset), 2))
+
+      
       # Consider stripping some of the contents of relyFit to reduce memory load
       if (inherits(relyFit, "try-error")) {
 
@@ -103,6 +133,7 @@ BaySTReliability <- function(jaspResults, dataset, options) {
         for (nm in names(relyFit[["bay"]][["ifitem"]][["samp"]])) {
           relyFit[["bay"]][["ifitem"]][["samp"]][[nm]] <- coda::mcmc(t(relyFit[["bay"]][["ifitem"]][["samp"]][[nm]]))
         }
+
         
         model[["dataset"]] <- dataset
 
@@ -176,7 +207,8 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 
   scaleTable <- createJaspTable("Bayesian Scale Reliability Statistics")
   scaleTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", 
-                                  "glbScale", "reverseScaledItems", "CredibleIntervalValue", "noSamples"))
+                                  "glbScale", "reverseScaledItems", "CredibleIntervalValue", "noSamples", 
+                                  "averageInterItemCor", "meanScale", "sdScale"))
 
   overTitle <- sprintf("%s%% Credible interval",
                        format(100*options[["CredibleIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -232,26 +264,35 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 
   derivedOptions <- model[["derivedOptions"]]
   itemDroppedSelected <- derivedOptions[["itemDroppedSelected"]]
-  order <- derivedOptions[["order"]]
-  overTitles <- format(derivedOptions[["namesEstimators"]][["tables"]][order], digits = 3, drop0trailing = T)
+  order <- derivedOptions[["order_item"]]
+  overTitles <- format(derivedOptions[["namesEstimators"]][["tables_item"]][order], digits = 3, drop0trailing = T)
   
   cred <- format(100*options[["CredibleIntervalValue"]], digits = 3, drop0trailing = TRUE)
   itemTable <- createJaspTable("Bayesian If Item Dropped Scale Reliability Statistics")
   itemTable$dependOn(options = c("variables",
                                  "mcDonaldScale", "alphaScale", "guttman2Scale", "glbScale", 
+                                 "averageInterItemCor", "meanScale", "sdScale",
                                  "mcDonaldItem",  "alphaItem",  "guttman2Item", "glbItem",
-                                 "reverseScaledItems", "CredibleIntervalValue"))
-  itemTable$addColumnInfo(name = "variable", title = "item dropped", type = "string")
+                                 "reverseScaledItems", "CredibleIntervalValue", 
+                                 "itemRestCor", "meanItem", "sdItem"))
+  itemTable$addColumnInfo(name = "variable", title = "Item", type = "string")
 
   idxSelected <- which(itemDroppedSelected)
+  estimators <- derivedOptions[["namesEstimators"]][["tables_item"]][order]
+  coefficients <- derivedOptions[["namesEstimators"]][["coefficients"]]
+  
+  for (i in idxSelected) {
+    if (estimators[i] %in% coefficients) {
+      itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
+                              overtitle = overTitles[i])
+      itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
+                              overtitle = overTitles[i])
+      itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Upper ", cred, "%"), type = "number", 
+                              overtitle = overTitles[i])
+    } else {
+      itemTable$addColumnInfo(name = paste0("postMean", i), title = estimators[i], type = "number")
+    }
 
-    for (i in idxSelected) {
-    itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
-                            overtitle = overTitles[i])
-    itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
-                            overtitle = overTitles[i])
-    itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Lower ", cred, "%"), type = "number", 
-                            overtitle = overTitles[i])
   }
 
   relyFit <- model[["relyFit"]]
@@ -260,7 +301,11 @@ BaySTReliability <- function(jaspResults, dataset, options) {
     tb <- data.frame(variable = model[["itemsDropped"]])
     for (i in idxSelected) {
       idx <- order[i]
-      newtb <- cbind(postMean = relyFit$bay$ifitem$est[[idx]], cris[[idx]])
+      if (idx %in% c(1:5)) {
+        newtb <- cbind(postMean = relyFit$bay$ifitem$est[[idx]], cris[[idx]])
+      } else {
+        newtb <- cbind(postMean = relyFit$bay$ifitem$est[[idx]])
+      }
       colnames(newtb) <- paste0(colnames(newtb), i)
       tb <- cbind(tb, newtb)
     }
@@ -551,4 +596,25 @@ BaySTReliability <- function(jaspResults, dataset, options) {
   plot <- createJaspPlot(plot = g, title = "Posterior Predictive Check Omega")
   plot$dependOn(options = c("dispPPC", "mcDonaldScale", "reverseScaledItems"))
   jaspResults[["OmegaPosteriorPredictive"]] <- plot
+}
+
+.reliabilityItemRestCor <- function(dataset, n.iter) {
+  help_dat <- array(0, c(ncol(dataset), nrow(dataset), 2))
+  
+  for (i in 1:ncol(dataset)) {
+    idx <- seq(1, ncol(dataset))
+    idx <- idx[idx!=i]
+    help_dat[i, , ] <- cbind(dataset[, i], apply(dataset[, idx], 1, mean))
+  }
+  
+  ircor_samp <- apply(help_dat, c(1), .WishartCorTransform, n.iter = n.iter, n.burnin = 50)
+  return(t(ircor_samp))
+}
+
+
+.WishartCorTransform <- function(x, n.iter, n.burnin = 50) {
+  tmp_cov <- Bayesrel:::covSamp(x, n.iter, n.burnin)
+  tmp_cor <- apply(tmp_cov, 1, cov2cor)
+  out <- apply(tmp_cor, 2, function(x) mean(x[x!=1]))
+  return(out)
 }

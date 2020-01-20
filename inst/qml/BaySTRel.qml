@@ -44,24 +44,28 @@ Form
           label: qsTr("Guttman's λ2");        
           id: guttman2      
           }
-        CheckBox 
-        {     
-          name: "guttman6Scale";			
-          label: qsTr("Guttman's λ6");        
-          id: guttman6      
-          }
+ //       CheckBox 
+   //     {     
+   //       name: "guttman6Scale";			
+   //       label: qsTr("Guttman's λ6");        
+   //       id: guttman6      
+  //        }
     		CheckBox 
     		{     
     		  name: "glbScale";				  
     		  label: qsTr("Greatest lower bound"); 
     		  id: glb      	              
     		  }
+	      CheckBox { name: "averageInterItemCor";				label: qsTr("Average interitem correlation")	}
+
     		CIField 
     		{      
     		name: "CredibleIntervalValue";   
     		label: qsTr("Credible interval")    
     		}
-    
+        CheckBox { name: "meanScale";						label: qsTr("Mean")							}
+        CheckBox { name: "sdScale";							label: qsTr("Standard deviation")			}
+        
     	}
            
     	Group
@@ -85,18 +89,22 @@ Form
     		  label: qsTr("Guttman's λ2 (if item dropped)");	        
     		  enabled: guttman2.checked  
     		  }
-    		CheckBox 
-    		{ 
-    		  name: "guttman6Item";				
-    		  label: qsTr("Guttman's λ6 (if item dropped)");	        
-    		  enabled: guttman6.checked  
-    		  }
+//    		CheckBox 
+//    		{ 
+//    		  name: "guttman6Item";				
+//    		  label: qsTr("Guttman's λ6 (if item dropped)");	        
+//    		  enabled: guttman6.checked  
+//    		  }
         CheckBox 
         { 
           name: "glbItem";     				
           label: qsTr("Greatest lower bound (if item dropped)");	
           enabled: glb.checked     
           }
+        CheckBox { name: "itemRestCor";						label: qsTr("Item-rest correlation")				}
+
+        CheckBox { name: "meanItem";						label: qsTr("Mean")								}
+        CheckBox { name: "sdItem";							label: qsTr("Standard deviation")				}
     	}
     
       Group
