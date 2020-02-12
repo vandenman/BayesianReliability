@@ -328,10 +328,12 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 		return()
   }
 
-  probTable <- createJaspTable(sprintf("Probability that Reliability Statistic is Larger than %.2f", 
-                                       options[["probTableValue"]]))
+  probTable <- createJaspTable(
+    sprintf("Probability that Reliability Statistic is Larger than %.2f and Smaller than %.2f", 
+            options[["probTableValueLow"]], options[["probTableValueHigh"]]))
   probTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale",
-                                 "glbScale", "reverseScaledItems", "probTableValue", "probTable"))
+                                 "glbScale", "reverseScaledItems", "probTableValueLow", "probTable",
+                                 "probTableValueHigh"))
   overTitle <- format("Probability",
                       digits = 3, drop0trailing = T)
   probTable$addColumnInfo(name = "statistic", title = "Statistic",   type = "string")
@@ -349,7 +351,8 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 	n.item <- dim(relyFit$bay$covsamp)[2]
 	prior <- priors[[as.character(n.item)]] 
   end <- length(prior[[1]][["x"]])
-  pos <- end - sum(prior[[1]][["x"]] > options[["probTableValue"]]) 
+  poslow <- end - sum(prior[[1]][["x"]] > options[["probTableValueLow"]]) 
+  poshigh <- end - sum(prior[[1]][["x"]] > options[["probTableValueHigh"]]) 
   # since the priors are only available in density form, the prior probability for the estimator being larger than
   # a cutoff is given by caculating the relative probability of the density from the cutoff to 1.
   # maybe check this with Don though
@@ -358,8 +361,10 @@ BaySTReliability <- function(jaspResults, dataset, options) {
     probsPost <- numeric(sum(selected))
     probsPrior <- numeric(sum(selected))
     for (i in seq_along(idx)) {
-      probsPost[i] <- mean(relyFit[["bay"]][["samp"]][[idx[i]]] > options[["probTableValue"]])
-      probsPrior[i] <- sum(prior[[idx[i]]][["y"]][pos:end]) / sum(prior[[idx[i]]][["y"]])
+      probsPost[i] <- mean(relyFit[["bay"]][["samp"]][[idx[i]]] > options[["probTableValueLow"]]) -
+                      mean(relyFit[["bay"]][["samp"]][[idx[i]]] > options[["probTableValueHigh"]])
+      probsPrior[i] <- sum(prior[[idx[i]]][["y"]][poslow:end]) / sum(prior[[idx[i]]][["y"]]) - 
+                       sum(prior[[idx[i]]][["y"]][poshigh:end]) / sum(prior[[idx[i]]][["y"]])
     }
     df <- data.frame(statistic = opts[idx], prior = probsPrior, posterior = probsPost)
     probTable$setData(df)
@@ -382,8 +387,8 @@ BaySTReliability <- function(jaspResults, dataset, options) {
     print("Plotcontainer remade")
     plotContainer <- createJaspContainer("Posteriors Plots")
     plotContainer$dependOn(options = c("variables", "reverseScaledItems", "plotPosterior", "shadePlots",
-                                       "probTable", "probTableValue", "cutoff", "fixXRange", 
-                                       "cutoffValue1", "cutoffValue2", "dispPrior", "noSamples"))
+                                       "probTable", "probTableValueLow", "probTableValueHigh", "fixXRange", 
+                                       "dispPrior", "noSamples"))
     jaspResults[["plotContainer"]] <- plotContainer
   } else {
     print("Plotcontainer from state")
@@ -404,26 +409,20 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 
 
 	if (options[["shadePlots"]] && options[["probTable"]]) {
-	  plotContainer$dependOn("probTableValue")
-	  shadePlots <- options[["probTableValue"]]
+	  plotContainer$dependOn("probTableValueLow")
+	  plotContainer$dependOn("probTableValueHigh")
+	  shadePlots <- c(options[["probTableValueLow"]], options[["probTableValueHigh"]])
 	} else {
 	  shadePlots <- NULL
 	}
 
-	if (options[["cutoff"]]) {
-    plotContainer$dependOn("cutoffValue1")
-    plotContainer$dependOn("cutoffValue2")
-    cutoffs <- c(options[["cutoffValue1"]], options[["cutoffValue2"]])
-	} else {
-	  cutoffs <- NULL
-	}
 
 	if (!is.null(relyFit)) {
 	  for (i in indices) {
 	    if (is.null(plotContainer[[nmsObjs[i]]])) {
 
 	      p <- .BayesianReliabilityMakeSinglePosteriorPlot(relyFit, scaleCri, i, nmsLabs[[i]], options[["fixXRange"]],
-	                                                       shadePlots, cutoffs, options[["dispPrior"]], prior)
+	                                                       shadePlots, options[["dispPrior"]], prior)
 	      plotObj <- createJaspPlot(plot = p, title = nmsObjs[i])
 	      plotObj$dependOn(options = names(indices[i]))
 	      plotObj$position <- i
@@ -448,7 +447,7 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 }
 
 .BayesianReliabilityMakeSinglePosteriorPlot <- function(relyFit, scaleCri, i, nms, fixXRange, 
-                                                        shade = NULL, cutoffs = NULL, priorTrue, priorSample) {
+                                                        shade = NULL, priorTrue, priorSample) {
 
   # TODO: consider precomputing all densities (maybe with kernsmooth?) and reducing memory that way
   pr <- priorSample[[i]]
@@ -504,7 +503,7 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 		ggplot2::scale_x_continuous(name = "Reliability", breaks = xBreaks, expand = xExpand)
 	
 	if (!is.null(shade)) {
-	  datFilter <- datDens[datDens[["x"]] >= shade, ]
+	  datFilter <- datDens[datDens[["x"]] >= shade[1] & datDens[["x"]] <= shade[2], ]
 	  g <- g + ggplot2::geom_ribbon(data = datFilter, mapping = ggplot2::aes(ymin = 0,ymax = y), 
 	                                fill = "grey", alpha = 0.95) +
 	           ggplot2::geom_line(size = .85)
@@ -523,23 +522,23 @@ BaySTReliability <- function(jaspResults, dataset, options) {
 	  
 	}
 
-	if (!is.null(cutoffs)) {
-	  cut1_peak <- d$y[findInterval(cutoffs[1], d$x)]
-	  cut2_peak <- d$y[findInterval(cutoffs[2], d$x)]
-	  if (length(cut1_peak) != 0 & findInterval(cutoffs[1], d$x) != 2^10) {
-	    g <- g +
-	      ggplot2::geom_segment(ggplot2::aes(x = cutoffs[1], y = 0, xend = cutoffs[1], yend = cut1_peak), 
-	                            color = "grey60", linetype = 1, alpha = .5, size = .3) +
-	      ggplot2::geom_line(size = .85)
-	    
-	  } 
-	  if (length(cut2_peak) != 0 & findInterval(cutoffs[2], d$x) != 2^10) {
-	    g <- g +
-	      ggplot2::geom_segment(ggplot2::aes(x = cutoffs[2], y = 0, xend = cutoffs[2], yend = cut2_peak), 
-	                          color = "grey60", linetype = 1, alpha = .5, size = .3) +
-	      ggplot2::geom_line(size = .85)
-	  }
-	}
+	# if (!is.null(cutoffs)) {
+	#   cut1_peak <- d$y[findInterval(cutoffs[1], d$x)]
+	#   cut2_peak <- d$y[findInterval(cutoffs[2], d$x)]
+	#   if (length(cut1_peak) != 0 & findInterval(cutoffs[1], d$x) != 2^10) {
+	#     g <- g +
+	#       ggplot2::geom_segment(ggplot2::aes(x = cutoffs[1], y = 0, xend = cutoffs[1], yend = cut1_peak), 
+	#                             color = "grey60", linetype = 1, alpha = .5, size = .3) +
+	#       ggplot2::geom_line(size = .85)
+	#     
+	#   } 
+	#   if (length(cut2_peak) != 0 & findInterval(cutoffs[2], d$x) != 2^10) {
+	#     g <- g +
+	#       ggplot2::geom_segment(ggplot2::aes(x = cutoffs[2], y = 0, xend = cutoffs[2], yend = cut2_peak), 
+	#                           color = "grey60", linetype = 1, alpha = .5, size = .3) +
+	#       ggplot2::geom_line(size = .85)
+	#   }
+	# }
 	
 
 

@@ -61,7 +61,8 @@ Form
     		CIField 
     		{      
     		name: "CredibleIntervalValue";   
-    		label: qsTr("Credible interval")    
+    		label: qsTr("Credible interval");
+    		defaultValue: 95
     		}
         CheckBox { name: "meanScale";						label: qsTr("Mean")							}
         CheckBox { name: "sdScale";							label: qsTr("Standard deviation")			}
@@ -122,33 +123,7 @@ Form
               name: "dispPrior";               
               label: qsTr("Display Priors")
               }
-            CheckBox 
-            { 
-              name: "cutoff";               
-              label: qsTr("Display cutoffs at")
-              columns: 2;
-              
-              DoubleField
-              {
-                name: "cutoffValue1"
-                label: qsTr("")
-                defaultValue: 0.70
-                min: 0
-                max: 1
-                decimals: 2
-                fieldWidth: 40
-                }               
-              DoubleField
-              {
-                name: "cutoffValue2"
-                label: qsTr("")
-                defaultValue: 0.80
-                min: 0
-                max: 1
-                decimals: 2
-                fieldWidth: 40
-                }
-              }
+        
             }
         }
         
@@ -158,20 +133,31 @@ Form
             { 
               id:                 probTable
               name:               "probTable"; 
-              label:              qsTr("Probability for Reliability Statistic  >")
+              label:              qsTr("Probability for: ")
               childrenOnSameRow:  true
               
               DoubleField
               {
-                
-                  name: "probTableValue"
-                  defaultValue: 0.80
-                  min: 0
-                  max: 1
-                  decimals: 2
-                  fieldWidth: 40
-      
+                name: "probTableValueLow"
+                afterLabel: qsTr("< Reliability <")
+                defaultValue: 0.70
+                min: 0
+                max: 1
+                decimals: 2
+                fieldWidth: 40
               }
+              DoubleField
+              {
+                name: "probTableValueHigh"
+               // label: qsTr("< Reliability <")
+                defaultValue: 1
+                min: 0
+                max: 1
+                decimals: 2
+                fieldWidth: 40
+                  
+              }
+              
             }
             Item
             {
@@ -183,7 +169,7 @@ Form
                 indent:   true
                 id:       shadePlots
                 name:     "shadePlots";              
-                label:    qsTr("Shade region in plots"); 
+                label:    qsTr("Shade posterior region in plots"); 
                 enabled:  probTable.checked    
                 x:        Theme.subOptionOffset
               }
