@@ -60,7 +60,7 @@ Form
 
     		CIField 
     		{      
-    		name: "CredibleIntervalValue";   
+    		name: "credibleIntervalValue";   
     		label: qsTr("Credible interval");
     		defaultValue: 95
     		}
@@ -77,31 +77,43 @@ Form
     		  name: "mcDonaldItem";				
     		  label: qsTr("McDonald's ω  (if item dropped)");	        
     		  enabled: mcdonald.checked 
+    		  id: mcdonaldItem
     		  }
     		CheckBox 
     		{ 
     		  name: "alphaItem";					
     		  label: qsTr("Cronbach's α (if item dropped)");	        
     		  enabled: cronbach.checked 
+    		  id: cronbachItem
     		  }
     		CheckBox 
     		{ 
     		  name: "guttman2Item";				
     		  label: qsTr("Guttman's λ2 (if item dropped)");	        
     		  enabled: guttman2.checked  
+    		  id: lambda2Item
     		  }
 //    		CheckBox 
 //    		{ 
 //    		  name: "guttman6Item";				
 //    		  label: qsTr("Guttman's λ6 (if item dropped)");	        
 //    		  enabled: guttman6.checked  
+//            id: lambda6item
 //    		  }
         CheckBox 
         { 
           name: "glbItem";     				
           label: qsTr("Greatest lower bound (if item dropped)");	
-          enabled: glb.checked     
+          enabled: glb.checked    
+          id: glbItem
           }
+        CheckBox 
+        { 
+          name: "plotItem";     				
+          label: qsTr("If item dropped plot");	
+          enabled: mcdonaldItem.checked || cronbachItem.checked || lambda2Item.checked || glbItem.checked
+        }
+        
         CheckBox { name: "itemRestCor";						label: qsTr("Item-rest correlation")				}
 
         CheckBox { name: "meanItem";						label: qsTr("Mean")								}
@@ -150,7 +162,7 @@ Form
               {
                 name: "probTableValueHigh"
                // label: qsTr("< Reliability <")
-                defaultValue: 1
+                defaultValue: .90
                 min: 0
                 max: 1
                 decimals: 2
@@ -169,7 +181,7 @@ Form
                 indent:   true
                 id:       shadePlots
                 name:     "shadePlots";              
-                label:    qsTr("Shade posterior region in plots"); 
+                label:    qsTr("Shade posterior region in plot"); 
                 enabled:  probTable.checked    
                 x:        Theme.subOptionOffset
               }
@@ -202,12 +214,12 @@ Form
             min: 100
             max: 1e7
         }
-//        RadioButtonGroup {
-//            title: qsTr("Missing Values")
-//            name: "missingValues"
-//            RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise"); checked: true	}
-//            RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise")					}
-//        }
+    RadioButtonGroup {
+      title: qsTr("Missing Values")
+      name: "missingValues"
+      RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise"); checked: true	}
+      RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise")					}
+    }
 
     }
 }

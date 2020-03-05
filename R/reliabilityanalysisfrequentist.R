@@ -1,4 +1,4 @@
-freqSTReliability <- function(jaspResults, dataset, options) {
+reliabilityFrequentist <- function(jaspResults, dataset, options) {
   
   dataset <- .frequentistReliabilityReadData(dataset, options)
   

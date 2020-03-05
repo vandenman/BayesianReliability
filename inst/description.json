@@ -4,9 +4,9 @@
 		"title" : 					"Reliability",
 		"description": 			"TODO",
 		"version":					"0.1",
-		"author":						"Julius Pfadt, Don van den Bergh & Eric-Jan Wagenmakers",
-		"maintainer":				"Julius Pfadt <julius.pfadt@gmail.com>",
-		"website":					"https://github.com/vandenman/BayesianReliability",
+		"author":						"Julius M. Pfadt, Don van den Bergh & Eric-Jan Wagenmakers",
+		"maintainer":				"Julius M. Pfadt <julius.pfadt@gmail.com>",
+		"website":					"https://github.com/juliuspf/ReliabilityBayesian",
 		"license":					"GPL (>= 2)",
 		"icon":     				"icon.svg",
 		"requiresDataset": 	true
@@ -16,20 +16,15 @@
 
 	"menu":
 	[
-	  		{
-			"title":	"Frequentist Reliability Analysis Old",
-			"function":	"ReliabilityAnalysis",
-			"qml":		"ReliabilityAnalysis.qml"
-		},
 	  {
 			"title"   : "Frequentist Reliability Analysis",
-			"qml"     : "freqSTRel.qml",
-			"function": "freqSTReliability"
+			"qml"     : "reliabilityFrequentist.qml",
+			"function": "reliabilityFrequentist"
 		},
 		{
 			"title"   : "Bayesian Reliability Analysis",
-			"qml"     : "BaySTRel.qml",
-			"function": "BaySTReliability"
+			"qml"     : "reliabilityBayesian.qml",
+			"function": "reliabilityBayesian"
 		}
 	]
 }
