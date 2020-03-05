@@ -8,7 +8,7 @@
 		"maintainer":				"Julius M. Pfadt <julius.pfadt@gmail.com>",
 		"website":					"https://github.com/juliuspf/ReliabilityBayesian",
 		"license":					"GPL (>= 2)",
-		"icon":     				"icon_classical.svg",
+		"icon":     				"icon_classic.svg",
 		"requiresDataset": 	true
 	},
 
@@ -18,7 +18,7 @@
 	[
 	  {
 			"title":	"Classical",
-			"icon":		"icon_classical.svg"
+			"icon":		"icon_classic.svg"
 		},
 	  {
 			"title"   : "Frequentist Reliability Analysis",
