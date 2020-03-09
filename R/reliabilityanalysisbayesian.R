@@ -1,5 +1,7 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
 
+  sink("~/log.txt")
+  on.exit(sink(NULL))
   #.libPaths("/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
   # print(.libPaths())
 #  print('hoi')
@@ -103,26 +105,26 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], freq = F,
                                      item.dropped = TRUE))
+      print(str(relyFit))
       
       # add the scale info
-      corsamp <- apply(relyFit$bay$covsamp, 1, cov2cor)
-      relyFit$bay$samp$avg_cor <- coda::mcmc(apply(corsamp, 2, function(x) mean(x[x!=1])))
-      relyFit$bay$est$avg_cor <- median(relyFit$bay$samp$avg_cor)
-      
-      relyFit$bay$samp$mean <- c(NA_real_, NA_real_)
-      relyFit$bay$est$mean <- median(rowMeans(dataset))
-      relyFit$bay$samp$sd <- c(NA_real_, NA_real_)
-      relyFit$bay$est$sd <- sd(apply(dataset, 2, mean))
-      
+      corsamp <- apply(relyFit$Bayes$covsamp, 1, cov2cor)
+      relyFit$Bayes$samp$avg_cor <- coda::mcmc(apply(corsamp, 2, function(x) mean(x[x!=1])))
+      relyFit$Bayes$est$avg_cor <- median(relyFit$Bayes$samp$avg_cor)
+
+      relyFit$Bayes$samp$mean <- c(NA_real_, NA_real_)
+      relyFit$Bayes$est$mean <- median(rowMeans(dataset))
+      relyFit$Bayes$samp$sd <- c(NA_real_, NA_real_)
+      relyFit$Bayes$est$sd <- sd(apply(dataset, 2, mean))
+
       # now the item statistics
-      ###### how to do this? I dont know, the item-rest correlation needs some thinking, mean and sd are straightforward 
-      relyFit$bay$ifitem$samp$ircor <- .reliabilityItemRestCor(dataset, options[["noSamples"]])
-      relyFit$bay$ifitem$est$ircor <- apply(relyFit$bay$ifitem$samp$ircor, 1, median)
-      
-      relyFit$bay$ifitem$est$mean <- apply(dataset, 2, mean)
-      relyFit$bay$ifitem$est$sd <- apply(dataset, 2, sd)  
-      relyFit$bay$ifitem$samp$mean <- (matrix(NA_real_, ncol(dataset), 2))
-      relyFit$bay$ifitem$samp$sd <- (matrix(NA_real_, ncol(dataset), 2))
+      relyFit$Bayes$ifitem$samp$ircor <- .reliabilityItemRestCor(dataset, options[["noSamples"]])
+      relyFit$Bayes$ifitem$est$ircor <- apply(relyFit$Bayes$ifitem$samp$ircor, 1, median)
+
+      relyFit$Bayes$ifitem$est$mean <- apply(dataset, 2, mean)
+      relyFit$Bayes$ifitem$est$sd <- apply(dataset, 2, sd)
+      relyFit$Bayes$ifitem$samp$mean <- (matrix(NA_real_, ncol(dataset), 2))
+      relyFit$Bayes$ifitem$samp$sd <- (matrix(NA_real_, ncol(dataset), 2))
 
       
       # Consider stripping some of the contents of relyFit to reduce memory load
@@ -131,11 +133,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
         model[["error"]] <- paste("The analysis crashed with the following error message:\n", relyFit)
 
       } else {
-
-        # # should be done inside of Bayesrel?
-        for (nm in names(relyFit[["bay"]][["ifitem"]][["samp"]])) {
-          relyFit[["bay"]][["ifitem"]][["samp"]][[nm]] <- coda::mcmc(t(relyFit[["bay"]][["ifitem"]][["samp"]][[nm]]))
-        }
 
         
         model[["dataset"]] <- dataset
@@ -233,7 +230,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	if (!is.null(relyFit)) {
 	  allData <- cbind.data.frame(
 	    statistic = opts,
-	    postMean = unlist(relyFit$bay$est, use.names = FALSE),
+	    postMean = unlist(relyFit$Bayes$est, use.names = FALSE),
 	    do.call(rbind, model[["cri"]][["scaleCri"]])
 	  )[order, ][selected[order], ] # TODO: <- simplify this
 
@@ -319,9 +316,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     for (i in idxSelected) {
       idx <- order[i]
       if (idx %in% c(1:5)) {
-        newtb <- cbind(postMean = relyFit$bay$ifitem$est[[idx]], cris[[idx]])
+        newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[idx]], cris[[idx]])
       } else {
-        newtb <- cbind(postMean = relyFit$bay$ifitem$est[[idx]])
+        newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[idx]])
       }
       colnames(newtb) <- paste0(colnames(newtb), i)
       tb <- cbind(tb, newtb)
@@ -365,7 +362,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	selected <- derivedOptions[["selectedEstimators"]]
 	idx      <- which(selected)
   
-	n.item <- dim(relyFit$bay$covsamp)[2]
+	n.item <- dim(relyFit$Bayes$covsamp)[2]
 	prior <- priors[[as.character(n.item)]] 
   end <- length(prior[[1]][["x"]])
   poslow <- end - sum(prior[[1]][["x"]] > options[["probTableValueLow"]]) 
@@ -421,7 +418,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	# probably better to do this once directly after computation!
 	scaleCri <- model[["cri"]][["scaleCri"]][order]
 	relyFit[["bay"]][["samp"]] <- relyFit[["bay"]][["samp"]][order]
-	n.item <- dim(relyFit$bay$covsamp)[2]
+	n.item <- dim(relyFit$Bayes$covsamp)[2]
 	prior <- priors[[as.character(n.item)]][c(4, 1, 2, 3)] ##### change this when more estimators are included!!!
 
 
@@ -469,9 +466,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   # TODO: consider precomputing all densities (maybe with kernsmooth?) and reducing memory that way
   pr <- priorSample[[i]]
   if (fixXRange) {
-    d <- stats::density(relyFit$bay$samp[[i]], from = 0, to = 1, n = 2^10)
+    d <- stats::density(relyFit$Bayes$samp[[i]], from = 0, to = 1, n = 2^10)
   } else {
-    d <- stats::density(relyFit$bay$samp[[i]], n = 2^10)
+    d <- stats::density(relyFit$Bayes$samp[[i]], n = 2^10)
   }
 	datDens <- data.frame(x = d$x, y = d$y)
 	datPrior <- data.frame(x = pr$x, y = pr$y)
@@ -672,16 +669,16 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 .BayesianReliabilityMakeIfItemPlot <- function(relyFit, i, nms, int) {
   
-  n_row <- length(unlist(relyFit$bay$ifitem$est[1]))
+  n_row <- length(unlist(relyFit$Bayes$ifitem$est[1]))
   lower <- (1-int)/2
   upper <- int + (1-int)/2
   # needs to look like this to pass the check for CRAN
-  dat <- data.frame(as.matrix(unlist(relyFit$bay$samp[i])), row.names =  NULL)
+  dat <- data.frame(as.matrix(unlist(relyFit$Bayes$samp[i])), row.names =  NULL)
   names(dat) <- "value"
   dat$colos <- "1"
   dat$var <- "original"
   
-  dat_del <- t(as.matrix(as.data.frame(relyFit$bay$ifitem$samp[i])))
+  dat_del <- t(as.matrix(as.data.frame(relyFit$Bayes$ifitem$samp[i])))
   
   names <- NULL
   for(j in 1:(n_row)){

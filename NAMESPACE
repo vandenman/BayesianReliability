@@ -2,3 +2,4 @@ export(reliabilityFrequentist)
 export(reliabilityBayesian)
   import('Rdpack');
   import('Bayesrel');
+  import('Rcsdp');
