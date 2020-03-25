@@ -44,12 +44,12 @@ Form
           label: qsTr("Guttman's λ2");        
           id: guttman2      
           }
- //       CheckBox 
-   //     {     
-   //       name: "guttman6Scale";			
-   //       label: qsTr("Guttman's λ6");        
-   //       id: guttman6      
-  //        }
+       CheckBox 
+        {     
+          name: "guttman6Scale";			
+          label: qsTr("Guttman's λ6");        
+          id: guttman6      
+          }
     		CheckBox 
     		{     
     		  name: "glbScale";				  
@@ -93,13 +93,13 @@ Form
     		  enabled: guttman2.checked  
     		  id: lambda2Item
     		  }
-//    		CheckBox 
-//    		{ 
-//    		  name: "guttman6Item";				
-//    		  label: qsTr("Guttman's λ6 (if item dropped)");	        
-//    		  enabled: guttman6.checked  
-//            id: lambda6item
-//    		  }
+    		CheckBox 
+    		{ 
+    		  name: "guttman6Item";				
+    		  label: qsTr("Guttman's λ6 (if item dropped)");	        
+    		  enabled: guttman6.checked  
+          id: lambda6item
+    		  }
         CheckBox 
         { 
           name: "glbItem";     				
@@ -111,11 +111,22 @@ Form
         { 
           name: "plotItem";     				
           label: qsTr("If item dropped plot");	
-          enabled: mcdonaldItem.checked || cronbachItem.checked || lambda2Item.checked || glbItem.checked
+          enabled: mcdonaldItem.checked || cronbachItem.checked || lambda2Item.checked || glbItem.checked;
+          id: plotItem
+          
+          CheckBox {
+            name: "orderItemKL";
+            label: qsTr("Order items by KL-distance");
+            enabled: plotItem.checked;
+          }
+          CheckBox {
+            name: "orderItemKS";
+            label: qsTr("Order items by KS-distance");
+            enabled: plotItem.checked
+          }
         }
         
         CheckBox { name: "itemRestCor";						label: qsTr("Item-rest correlation")				}
-
         CheckBox { name: "meanItem";						label: qsTr("Mean")								}
         CheckBox { name: "sdItem";							label: qsTr("Standard deviation")				}
     	}
@@ -190,7 +201,66 @@ Form
       }
       
   
+	
 	Section
+	{
+		title: qsTr("Convergence")
+		
+		Group {
+		 title: qsTr("Sampling Parameters");
+		 IntegerField
+        {
+            name: "noSamples"
+            label: qsTr("No. of posterior samples")
+            defaultValue: 500
+            fieldWidth: 50
+            min: 100
+            max: 1e7
+        }
+        IntegerField
+        {
+            name: "noBurnin"
+            label: qsTr("No. of burn-in")
+            defaultValue: 50
+            fieldWidth: 50
+            min: 20
+            max: 1e6
+        }
+        IntegerField
+        {
+            name: "noChains"
+            label: qsTr("No. of chains")
+            defaultValue: 1
+            fieldWidth: 50
+            min: 1
+            max: 20
+        }
+        IntegerField
+        {
+            name: "noThin"
+            label: qsTr("Thinning interval length")
+            defaultValue: 1
+            fieldWidth: 50
+            min: 1
+            max: 1e3
+        }
+		}
+		
+		Group {
+		  title: qsTr("Diagnostics")
+		  CheckBox {
+		    name: "rHat"
+		    label: qsTr("R-hat")
+		  }
+		  CheckBox {
+		    name: "tracePlot"
+		    label: qsTr("Traceplots")
+		  }
+		}
+       
+}
+
+Section
 	{
 		title: qsTr("Reverse-Scaled Items")
 		
@@ -202,23 +272,16 @@ Form
 		}
 	}
 	
+	
 	Section
 	{
-		title: qsTr("Advanced Options")
-        IntegerField
-        {
-            name: "noSamples"
-            label: qsTr("No. of posterior samples")
-            defaultValue: 500
-            fieldWidth: 50
-            min: 100
-            max: 1e7
-        }
+		title: qsTr("Missing Data Handling")
+       
     RadioButtonGroup {
       title: qsTr("Missing Values")
       name: "missingValues"
-      RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise"); checked: true	}
-      RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise")					}
+      RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise"); checked: true}
+      RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise")}
     }
 
     }

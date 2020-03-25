@@ -43,12 +43,12 @@ Form
         label: qsTr("Guttman's λ2");         
         id: guttman2f       	          
       }
-//      CheckBox 
-  //    {     
-//        name: "guttman6Scalef";			
-//        label: qsTr("Guttman's λ6");         
-//        id: guttman6f       	          
-//      }
+      CheckBox 
+      {     
+        name: "guttman6Scalef";			
+        label: qsTr("Guttman's λ6");         
+        id: guttman6f       	          
+      }
       CheckBox 
       {     
         name: "glbScalef";				  
@@ -59,7 +59,7 @@ Form
 
       CIField 
       {      
-        name: "ConfidenceIntervalValue";   
+        name: "confidenceIntervalValue";   
         label: qsTr("Confidence interval")    
       }
       CheckBox { name: "meanScale";						label: qsTr("Mean")							}
@@ -87,6 +87,12 @@ Form
         name: "guttman2Itemf";			
         label: qsTr("Guttman's λ2 (if item dropped)");	       
         enabled: guttman2f.checked  
+      }
+      CheckBox 
+      { 
+        name: "guttman6Itemf";			
+        label: qsTr("Guttman's λ6 (if item dropped)");	       
+        enabled: guttman6f.checked  
       }
       CheckBox 
       { 
@@ -128,9 +134,9 @@ Form
     }
   RadioButtonGroup {
         title: qsTr("Missing Values")
-        name: "missingValues"
-        RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise"); checked: true	}
-        RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise")					}
+        name: "missingValuesF"
+        RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise"); checked: true}
+        RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise")}
         }
   }
 }

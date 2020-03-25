@@ -23,7 +23,7 @@
 			"icon":		"reliability_icon_classic.svg"
 		},
 	  {
-			"title"   : "Single Test Reliability Analysis",
+			"title"   : "Single-Test Reliability Analysis",
 			"qml"     : "reliabilityFrequentist.qml",
 			"function": "reliabilityFrequentist"
 		},
@@ -35,7 +35,7 @@
 			"icon":		"reliability_icon_bayesian.svg"
 		},
 		{
-			"title"   : "Bayesian Single Test Reliability Analysis",
+			"title"   : "Bayesian Single-Test Reliability Analysis",
 			"qml"     : "reliabilityBayesian.qml",
 			"function": "reliabilityBayesian"
 		}
