@@ -1,16 +1,8 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
 
-  # sink("~/jasp/log_Bay.txt")
-  # on.exit(sink(NULL))
+  sink("~/jasp/log_Bay.txt")
+  on.exit(sink(NULL))
   
-  #.libPaths("/Library/Frameworks/R.framework/Versions/3.5/Resources/library")
-  # print(.libPaths())
-#  print('hoi')
-#  Bayesrel::strel(matrix(rnorm(30), 10, 3))
-#  print('hoi2')
-  
-    # if (!require("Bayesrel"))
-  #   install.packages("Bayesrel")
 
 	dataset <- .BayesianReliabilityReadData(dataset, options)
 
@@ -127,7 +119,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
           model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", relyFit[["complete"]], 
                                         " listwise complete cases.")
         }
-      }
+      } 
       
       # add the scale info
       corsamp <- apply(relyFit$Bayes$covsamp, 1, cov2cor)
@@ -135,17 +127,18 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       relyFit$Bayes$est$avg_cor <- median(relyFit$Bayes$samp$avg_cor)
 
       relyFit$Bayes$samp$mean <- c(NA_real_, NA_real_)
-      relyFit$Bayes$est$mean <- median(rowMeans(dataset))
+      relyFit$Bayes$est$mean <- mean(rowMeans(dataset, na.rm = T))
       relyFit$Bayes$samp$sd <- c(NA_real_, NA_real_)
-      relyFit$Bayes$est$sd <- sd(apply(dataset, 2, mean))
+      relyFit$Bayes$est$sd <- sd(colMeans(dataset, na.rm = T))
+
 
       # now the item statistics
       relyFit$Bayes$ifitem$samp$ircor <- .reliabilityItemRestCor(dataset, options[["noSamples"]], options[["noBurnin"]], 
                                                                  missing)
-      relyFit$Bayes$ifitem$est$ircor <- apply(relyFit$Bayes$ifitem$samp$ircor, 1, median)
+      relyFit$Bayes$ifitem$est$ircor <- apply(relyFit$Bayes$ifitem$samp$ircor, 2, median)
 
-      relyFit$Bayes$ifitem$est$mean <- apply(dataset, 2, mean)
-      relyFit$Bayes$ifitem$est$sd <- apply(dataset, 2, sd)
+      relyFit$Bayes$ifitem$est$mean <- colMeans(dataset, na.rm = T)
+      relyFit$Bayes$ifitem$est$sd <- apply(dataset, 2, sd, na.rm = T)
       relyFit$Bayes$ifitem$samp$mean <- (matrix(NA_real_, ncol(dataset), 2))
       relyFit$Bayes$ifitem$samp$sd <- (matrix(NA_real_, ncol(dataset), 2))
 
@@ -178,7 +171,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	                                            options[["credibleIntervalValue"]])
 	    itemCri  <- .BayesianReliabilityCalcCri(relyFit[["Bayes"]][["ifitem"]][["samp"]], 
 	                                            options[["credibleIntervalValue"]])
-
+      
 	    
 	    criState <- list(scaleCri = scaleCri, itemCri  = itemCri)
 	    jaspCriState <- createJaspState(criState)
@@ -337,7 +330,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     tb <- data.frame(variable = model[["itemsDropped"]])
     for (i in idxSelected) {
       idx <- order[i]
-      if (idx %in% c(1:5)) {
+      if (idx %in% c(1:6)) { # check this when more estimators are included !!!!!!!!!!!!!!!!!!!!!
         newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[idx]], cris[[idx]])
       } else {
         newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[idx]])
@@ -891,9 +884,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   help_dat <- array(0, c(ncol(dataset), nrow(dataset), 2))
   
   for (i in 1:ncol(dataset)) {
-    idx <- seq(1, ncol(dataset))
-    idx <- idx[idx!=i]
-    help_dat[i, , ] <- cbind(dataset[, i], apply(dataset[, idx], 1, mean, na.rm = T))
+    help_dat[i, , ] <- cbind(dataset[, i], rowMeans(dataset[, -i], na.rm = T))
   }
   
   ircor_samp <- apply(help_dat, c(1), .WishartCorTransform, n.iter = n.iter, n.burnin = n.burnin, missing)

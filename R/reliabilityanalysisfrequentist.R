@@ -96,18 +96,23 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       if (any(is.na(dataset))) {
         if (!is.null(relyFit[["miss_pairwise"]])) {
           model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
-        }
+          use.cases <- "pairwise.complete.obs"
+        } 
         if (!is.null(relyFit[["complete"]])) {
           model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", relyFit[["complete"]], 
                                         " listwise complete cases.")
+          use.cases <- "complete.obs"
+        } 
+      } else {
+        use.cases <- "everything"
         }
-      }
       
       # first the scale statistics
-      cordat <- cor(dataset)
+      cordat <- cor(dataset, use = use.cases)
       relyFit$freq$est$avg_cor <- mean(cordat[lower.tri(cordat)])
-      relyFit$freq$est$mean <- mean(dataset)
-      relyFit$freq$est$sd <- sd(apply(dataset, 2, mean))
+      relyFit$freq$est$mean <- mean(rowMeans(dataset, na.rm = T))
+      relyFit$freq$est$sd <- sd(colMeans(dataset, na.rm = T))
+
       
       corsamp <- apply(relyFit$freq$covsamp, c(1), cov2cor)
       relyFit$freq$boot$avg_cor <- apply(corsamp, 2, function(x) mean(x[x!=1]))
@@ -119,12 +124,10 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       relyFit$freq$ifitem$ircor <- NULL
       
       for (i in 1:ncol(dataset)) {
-        idx <- seq(1, ncol(dataset))
-        idx <- idx[idx!=i]
-        relyFit$freq$ifitem$ircor[i] <- cor(dataset[, i], apply(dataset[, idx], 1, mean))
+        relyFit$freq$ifitem$ircor[i] <- cor(dataset[, i], rowMeans(dataset[, -i], na.rm = T), use = use.cases)
       }
-      relyFit$freq$ifitem$mean <- apply(dataset, 2, mean)
-      relyFit$freq$ifitem$sd <- apply(dataset, 2, sd)  
+      relyFit$freq$ifitem$mean <- colMeans(dataset, na.rm = T)
+      relyFit$freq$ifitem$sd <- apply(dataset, 2, sd, na.rm = T)  
       
       
       # Consider stripping some of the contents of relyFit to reduce memory load
@@ -156,7 +159,9 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       
       # omega doesnt work with bootstrapping:
       tmp <- Bayesrel::strel(dataset, estimates = "omega", Bayes = F, item.dropped = T, omega.freq.method = "cfa", 
-                             interval = options[["confidenceIntervalValue"]])
+                             interval = options[["confidenceIntervalValue"]]) 
+      # this will work with the github package, so far the interval doesnt change.
+
       omegaCfi <- as.vector(unlist(tmp$freq$conf))
       names(omegaCfi) <- c("lower", "upper")
       scaleCfi$omega <- omegaCfi
