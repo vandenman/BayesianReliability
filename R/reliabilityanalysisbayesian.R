@@ -1,7 +1,7 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
 
-  sink("~/jasp/log_Bay.txt")
-  on.exit(sink(NULL))
+  # sink("~/jasp/log_Bay.txt")
+  # on.exit(sink(NULL))
   
 
 	dataset <- .BayesianReliabilityReadData(dataset, options)
@@ -867,7 +867,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     ggplot2::geom_line() +
     ggplot2::ylab(nms)
   
-  return(JASPgraphs::themeJasp(g))
+  return(JASPgraphs::themeJasp(g, width = 500))
   
 }
 
