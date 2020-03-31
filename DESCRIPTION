@@ -2,7 +2,7 @@ Package: DevelopmentModule
 Type: Package
 Title: Reliability Module for JASP
 Version: 0.1
-Date: 2020-03-27
+Date: 2020-03-31
 Author: Julius M. Pfadt, Don van den Bergh & Eric-Jan Wagenmakers
 Website: https://github.com/juliuspf/reliabilityBayesian
 Maintainer: Julius M. Pfadt <julius.pfadt@gmail.com>

@@ -1,6 +1,6 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
 
-  # sink("~/jasp/log_Bay.txt")
+  # sink("~/Downloads/log_Bay.txt")
   # on.exit(sink(NULL))
   
 
@@ -100,11 +100,12 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
         dataset <- dataset %*% diag(key, nvar, nvar)
       }
       
+      missing <- "all"
       if (any(is.na(dataset))) {
         if (options[["missingValues"]] == "excludeCasesPairwise") {missing <- "pairwise"}
-        else if (options[["missingValues"]] == "excludeCasesListwise") {missing <- "listwise"}
+        # else if (options[["missingValues"]] == "excludeCasesListwise") {missing <- "listwise"}
       }
-
+      
       model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], n.burnin = options[["noBurnin"]], 
@@ -155,7 +156,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
         model[["relyFit"]] <- relyFit
 
         stateObj <- createJaspState(model)
-        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamples", "noBurnin", "missingValues"))
+        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamples", "noBurnin", "noChains", "noThin",
+                                      "missingValues"))
         jaspResults[["modelObj"]] <- stateObj
       }
     }
@@ -227,6 +229,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   scaleTable <- createJaspTable("Bayesian Scale Reliability Statistics")
   scaleTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale",  "guttman6Scale",
                                   "glbScale", "reverseScaledItems", "credibleIntervalValue", "noSamples", "noBurnin",
+                                  "noChains", "noThin",
                                   "averageInterItemCor", "meanScale", "sdScale"))
 
   overTitle <- sprintf("%s%% Credible interval",
@@ -453,7 +456,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     plotContainer <- createJaspContainer("Posteriors Plots")
     plotContainer$dependOn(options = c("variables", "reverseScaledItems", "plotPosterior", "shadePlots",
                                        "probTable", "probTableValueLow", "probTableValueHigh", "fixXRange", 
-                                       "dispPrior", "noSamples", "noBurnin", "credibleIntervalValue"))
+                                       "dispPrior", "noSamples", "noBurnin", "noChains", "noThin",
+                                       "credibleIntervalValue"))
     jaspResults[["plotContainer"]] <- plotContainer
   } else {
     print("Plotcontainer from state")
@@ -673,7 +677,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   if (is.null(plotContainerItem)) {
     print("Plotcontainer remade")
     plotContainerItem <- createJaspContainer("If Item Dropped Posterior Plots")
-    plotContainerItem$dependOn(options = c("variables", "plotItem", "noSamples", "noBurnin", "credibleIntervalValue", 
+    plotContainerItem$dependOn(options = c("variables", "plotItem", "noSamples", "noBurnin", "noChains", "noThin",
+                                           "credibleIntervalValue", 
                                           "orderItemKL", "orderItemKS", "reverseScaledItems"))
     jaspResults[["plotContainerItem"]] <- plotContainerItem
   } else {
@@ -811,7 +816,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   if (is.null(plotContainerTP)) {
     print("PlotcontainerTP remade")
     plotContainerTP <- createJaspContainer("Convergence Traceplot")
-    plotContainerTP$dependOn(options = c("variables", "tracePlot", "noSamples", "noBurnin"))
+    plotContainerTP$dependOn(options = c("variables", "tracePlot", "noSamples", "noBurnin", "noChains", "noThin"))
     jaspResults[["plotContainerTP"]] <- plotContainerTP
     
   } else {
@@ -833,7 +838,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       if (is.null(plotContainerTP[[nmsObjs[i]]])) {
         
         p <- .BayesianReliabilityMakeTracePlot(relyFit, i, nmsLabs[[i]])
-        plotObjTP <- createJaspPlot(plot = p, title = nmsObjs[i])
+        plotObjTP <- createJaspPlot(plot = p, title = nmsObjs[i], width = 400)
         plotObjTP$dependOn(options = names(indices[i]))
         plotObjTP$position <- i
         plotContainerTP[[nmsObjs[i]]] <- plotObjTP
@@ -867,7 +872,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     ggplot2::geom_line() +
     ggplot2::ylab(nms)
   
-  return(JASPgraphs::themeJasp(g, width = 500))
+  return(JASPgraphs::themeJasp(g))
   
 }
 

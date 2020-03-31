@@ -1,6 +1,6 @@
 reliabilityFrequentist <- function(jaspResults, dataset, options) {
-  # sink("~/jasp/log_freq.txt")
-  # on.exit(sink(NULL))
+  sink("~/Downloads/log_freq.txt")
+  on.exit(sink(NULL))
   
   dataset <- .frequentistReliabilityReadData(dataset, options)
   
@@ -91,9 +91,11 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
-                                     Bayes = F, n.boot = options[["noSamplesf"]],
+                                     Bayes = FALSE, n.boot = options[["noSamplesf"]],
                                      item.dropped = TRUE, omega.freq.method = "cfa", 
+                                     alpha.int.analytic = TRUE, 
                                      missing = missing))
+      
       if (any(is.na(dataset))) {
         if (!is.null(relyFit[["miss_pairwise"]])) {
           model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
@@ -145,6 +147,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         stateObj <- createJaspState(model)
         stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValues"))
         jaspResults[["modelObj"]] <- stateObj
+
       }
     }
   } else {
@@ -159,14 +162,18 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                               options[["confidenceIntervalValue"]])
       
       # omega doesnt work with bootstrapping:
-      tmp <- Bayesrel::strel(dataset, estimates = "omega", Bayes = F, item.dropped = T, omega.freq.method = "cfa", 
+      tmp <- Bayesrel::strel(dataset, estimates = c("alpha", "omega"), Bayes = F, item.dropped = T, 
+                             alpha.int.analytic = TRUE, omega.freq.method = "cfa", 
                              interval = options[["confidenceIntervalValue"]]) 
-      # this will work with the github package, so far the interval doesnt change.
+      # this will work with the github package, so far the interval for omega doesnt change.
 
-      omegaCfi <- as.vector(unlist(tmp$freq$conf))
+      alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 3)]
+      names(alphaCfi) <- c("lower", "upper")
+      scaleCfi$alpha <- alphaCfi
+      omegaCfi <- as.vector(unlist(tmp$freq$conf))[c(2, 4)]
       names(omegaCfi) <- c("lower", "upper")
       scaleCfi$omega <- omegaCfi
-      scaleCfi <- scaleCfi[c(1, 2, 3, 4, 8, 5, 6, 7)]
+      scaleCfi <- scaleCfi[c(7, 1, 2, 3, 8, 4, 5, 6)] # check this when more estimators come in
 
       cfiState <- list(scaleCfi = scaleCfi)
       jaspCfiState <- createJaspState(cfiState)
@@ -222,7 +229,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   }
   
   scaleTableF <- createJaspTable("Frequentist Scale Reliability Statistics")
-  scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6ScaleF",
+  scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef",
                                    "glbScalef", "reverseScaledItems", "confidenceIntervalValue", "noSamplesf", 
                                    "averageInterItemCor", "meanScale", "sdScale"))
   
