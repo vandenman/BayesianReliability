@@ -113,7 +113,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
           options[["missings"]] <- "complete.obs"
           }
       }
-      
+      print(options[["missingValues"]])
       model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], n.burnin = options[["noBurnin"]], 
@@ -228,7 +228,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 }
 
 
-# tables ----
+# ----------------------------- tables ------------------------------------
 .BayesianReliabilityScaleTable <- function(jaspResults, model, options) {
 
   if (!is.null(jaspResults[["scaleTable"]])) {
@@ -240,7 +240,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   scaleTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale",  "guttman6Scale",
                                   "glbScale", "reverseScaledItems", "credibleIntervalValue", "noSamples", "noBurnin",
                                   "noChains", "noThin",
-                                  "averageInterItemCor", "meanScale", "sdScale"))
+                                  "averageInterItemCor", "meanScale", "sdScale", "missingValues"))
 
   overTitle <- sprintf("%s%% Credible interval",
                        format(100*options[["credibleIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -307,7 +307,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
                                  "averageInterItemCor", "meanScale", "sdScale",
                                  "mcDonaldItem",  "alphaItem",  "guttman2Item",  "guttman6Item", "glbItem",
                                  "reverseScaledItems", "credibleIntervalValue", 
-                                 "itemRestCor", "meanItem", "sdItem"))
+                                 "itemRestCor", "meanItem", "sdItem", "missingValues"))
   itemTable$addColumnInfo(name = "variable", title = "Item", type = "string")
 
   idxSelected <- which(itemDroppedSelected)
@@ -374,7 +374,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
             options[["probTableValueLow"]], options[["probTableValueHigh"]]))
   probTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", "guttman6Scale",
                                  "glbScale", "reverseScaledItems", "probTableValueLow", "probTable",
-                                 "probTableValueHigh"))
+                                 "probTableValueHigh", "missingValues"))
   overTitle <- format("Probability",
                       digits = 3, drop0trailing = T)
   probTable$addColumnInfo(name = "statistic", title = "Statistic",   type = "string")
@@ -427,7 +427,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   convTable <- createJaspTable(
     sprintf("Convergence Diagnostics"))
   convTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", "guttman6Scale",
-                                 "glbScale", "reverseScaledItems", "rHat"))
+                                 "glbScale", "reverseScaledItems", "rHat", "missingValues"))
   convTable$addColumnInfo(name = "statistic", title = "Statistic",   type = "string")
   convTable$addColumnInfo(name = "rhat",     title = "R-hat", type = "number")
   
@@ -470,7 +470,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     plotContainer$dependOn(options = c("variables", "reverseScaledItems", "plotPosterior", "shadePlots",
                                        "probTable", "probTableValueLow", "probTableValueHigh", "fixXRange", 
                                        "dispPrior", "noSamples", "noBurnin", "noChains", "noThin",
-                                       "credibleIntervalValue"))
+                                       "credibleIntervalValue","alphaScale", "guttman2Scale", "guttman6Scale", 
+                                       "glbScale", "mcDonaldScale", "missingValues"))
     jaspResults[["plotContainer"]] <- plotContainer
   } else {
     print("Plotcontainer from state")
@@ -542,7 +543,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 
 	xBreaks <- JASPgraphs::getPrettyAxisBreaks(datDens$x)
-	print(xBreaks)
 	# max height posterior is at 90% of plot area; remainder is for credible interval
 	ymax <- max(d$y) / .9
 	yBreaks <- JASPgraphs::getPrettyAxisBreaks(c(0, ymax))
@@ -578,13 +578,13 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 		                        height = height, inherit.aes = FALSE) +
 		# ggrepel::geom_text_repel(data = datTxt, mapping = ggplot2::aes(x = x, y = y, label = label), 
 	  #                          inherit.aes = FALSE, segment.alpha = 0) +
-	  ggplot2::geom_text(data = datTxt, mapping = ggplot2::aes(x = x, y = y, label = label), inherit.aes = FALSE) +
-		ggplot2::scale_y_continuous(name = "Density", breaks = yBreaks, limits = range(yBreaks)) +
-		ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand)
+	ggplot2::geom_text(data = datTxt, mapping = ggplot2::aes(x = x, y = y, label = label), inherit.aes = FALSE) +
+	ggplot2::scale_y_continuous(name = "Density", breaks = yBreaks, limits = range(yBreaks)) +
+	ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand)
 	
 	if (!is.null(shade)) {
 	  datFilter <- datDens[datDens[["x"]] >= shade[1] & datDens[["x"]] <= shade[2], ]
-	  g <- g + ggplot2::geom_ribbon(data = datFilter, mapping = ggplot2::aes(ymin = 0,ymax = y), 
+	  g <- g + ggplot2::geom_ribbon(data = datFilter, mapping = ggplot2::aes(ymin = 0, ymax = y), 
 	                                fill = "grey", alpha = 0.95) +
 	           ggplot2::geom_line(size = .85)
 	}
@@ -676,7 +676,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   }
   plot <- createJaspPlot(plot = g, title = "Posterior Predictive Check Omega", width = 400)
   plot$dependOn(options = c("variables", "reverseScaledItems", "noSamples", "noBurnin", "noChains", "noThin",
-                            "credibleIntervalValue", "dispPPC", "mcDonaldScale"))
+                            "credibleIntervalValue", "dispPPC", "mcDonaldScale", "missingValues"))
   jaspResults[["OmegaPosteriorPredictive"]] <- plot
 }
 
@@ -692,7 +692,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     plotContainerItem <- createJaspContainer("If Item Dropped Posterior Plots")
     plotContainerItem$dependOn(options = c("variables", "plotItem", "noSamples", "noBurnin", "noChains", "noThin",
                                            "credibleIntervalValue", 
-                                          "orderItemKL", "orderItemKS", "reverseScaledItems"))
+                                          "orderItemKL", "orderItemKS", "reverseScaledItems", "missingValues"))
     jaspResults[["plotContainerItem"]] <- plotContainerItem
   } else {
     print("Plotcontainer from state")
@@ -829,7 +829,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   if (is.null(plotContainerTP)) {
     print("PlotcontainerTP remade")
     plotContainerTP <- createJaspContainer("Convergence Traceplot")
-    plotContainerTP$dependOn(options = c("variables", "tracePlot", "noSamples", "noBurnin", "noChains", "noThin"))
+    plotContainerTP$dependOn(options = c("variables", "tracePlot", "noSamples", "noBurnin", "noChains", "noThin",
+                                         "missingValues", "reverseScaledItems"))
     jaspResults[["plotContainerTP"]] <- plotContainerTP
     
   } else {
@@ -892,7 +893,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 
 
-# --- some other functions
+# ----- some other functions -----------------
 .reliabilityItemRestCor <- function(dataset, n.iter, n.burnin, missing) {
   if (missing == "listwise") {
     pos <- which(is.na(dataset), arr.ind = T)[, 1]

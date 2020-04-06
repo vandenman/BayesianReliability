@@ -89,8 +89,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         dataset[ ,cols] = total - dataset[ ,cols]
       }
 
-      if (options[["missingValuesF"]] == "excludeCasesPairwise") {missing <- "pairwise"}
-      else if (options[["missingValuesF"]] == "excludeCasesListwise") {missing <- "listwise"}
+      if (options[["missingValuesf"]] == "excludeCasesPairwise") {missing <- "pairwise"}
+      else if (options[["missingValuesf"]] == "excludeCasesListwise") {missing <- "listwise"}
       
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
@@ -148,7 +148,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         model[["relyFit"]] <- relyFit
         
         stateObj <- createJaspState(model)
-        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValues"))
+        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf"))
         jaspResults[["modelObj"]] <- stateObj
 
       }
