@@ -89,8 +89,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         dataset[ ,cols] = total - dataset[ ,cols]
       }
 
-      if (options[["missingValuesF"]] == "excludeCasesPairwise") {missing <- "pairwise"}
-      else if (options[["missingValuesF"]] == "excludeCasesListwise") {missing <- "listwise"}
+      if (options[["missingValuesf"]] == "excludeCasesPairwise") {missing <- "pairwise"}
+      else if (options[["missingValuesf"]] == "excludeCasesListwise") {missing <- "listwise"}
       
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
@@ -148,7 +148,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         model[["relyFit"]] <- relyFit
         
         stateObj <- createJaspState(model)
-        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValues"))
+        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf"))
         jaspResults[["modelObj"]] <- stateObj
 
       }
@@ -243,7 +243,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   scaleTableF <- createJaspTable("Frequentist Scale Reliability Statistics")
   scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef",
                                    "glbScalef", "reverseScaledItems", "confidenceIntervalValue", "noSamplesf", 
-                                   "averageInterItemCor", "meanScale", "sdScale"))
+                                   "averageInterItemCor", "meanScale", "sdScale", "missingValuesf"))
   
   overTitle <- sprintf("%s%% Confidence interval",
                        format(100*options[["confidenceIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -310,7 +310,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                   "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef", "glbScalef", 
                                   "averageInterItemCor", "meanScale", "sdScale",
                                   "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf", "guttman6Itemf", "glbItemf",
-                                  "reverseScaledItems", "meanItem", "sdItem", "itemRestCor"))
+                                  "reverseScaledItems", "meanItem", "sdItem", "itemRestCor", "missingValuesf"))
   itemTableF$addColumnInfo(name = "variable", title = "Item", type = "string")
   
   idxSelectedF <- which(itemDroppedSelectedF)
@@ -355,7 +355,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   }
 
   fitTable <- createJaspTable(sprintf("Fit Measures of Single Factor Model Fit"))
-  fitTable$dependOn(options = c("variables", "mcDonaldScalef", "reverseScaledItems", "fitMeasures"))
+  fitTable$dependOn(options = c("variables", "mcDonaldScalef", "reverseScaledItems", "fitMeasures", "missingValuesf"))
   fitTable$addColumnInfo(name = "measure", title = "Fit Measure",   type = "string")
   fitTable$addColumnInfo(name = "value",     title = "Value", type = "number")
 
