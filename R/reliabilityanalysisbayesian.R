@@ -1,7 +1,7 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
 
-  # sink("~/Downloads/log_Bay.txt")
-  # on.exit(sink(NULL))
+  sink("~/Downloads/log_Bay.txt")
+  on.exit(sink(NULL))
   
 
 	dataset <- .BayesianReliabilityReadData(dataset, options)
@@ -79,7 +79,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
              type = c("infinity", "variance", "observations"),
              observations.amount = " < 3",
              exitAnalysisIfErrors = TRUE)
-
 }
 
 # estimate reliability ----
@@ -94,16 +93,25 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
       dataset <- as.matrix(dataset) # fails for string factors!
       if (length(options[["reverseScaledItems"]]) > 0L) {
-        nvar <- length(variables)
-        key <- rep(1, nvar)
-        key[match(.v(unlist(options[["reverseScaledItems"]])), nvar)] <- -1
-        dataset <- dataset %*% diag(key, nvar, nvar)
+        # nvar <- length(variables)
+        # key <- rep(1, nvar)
+        # key[match(.v(unlist(options[["reverseScaledItems"]])), nvar)] <- -1
+        # dataset <- dataset %*% diag(key, nvar, nvar) # seems to be not working
+        cols <- match(unlist(options[["reverseScaledItems"]]), .unv(colnames(dataset)))
+        total <- min(dataset, na.rm = T) + max(dataset, na.rm = T)
+        dataset[ ,cols] = total - dataset[ ,cols]
       }
       
-      missing <- "all"
+      missing <- "none" 
+      options[["missings"]] <- "everything"
       if (any(is.na(dataset))) {
-        if (options[["missingValues"]] == "excludeCasesPairwise") {missing <- "pairwise"}
-        # else if (options[["missingValues"]] == "excludeCasesListwise") {missing <- "listwise"}
+        if (options[["missingValues"]] == "excludeCasesPairwise") {
+          missing <- "pairwise"
+          options[["missings"]] <- "pairwise.complete.obs"
+        } else if (options[["missingValues"]] == "excludeCasesListwise") {
+          missing <- "listwise"
+          options[["missings"]] <- "complete.obs"
+          }
       }
       
       model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
@@ -154,6 +162,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
         model[["dataset"]] <- dataset
 
         model[["relyFit"]] <- relyFit
+        
+        model[["options"]] <- options
 
         stateObj <- createJaspState(model)
         stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamples", "noBurnin", "noChains", "noThin",
@@ -444,7 +454,10 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 }
 
 
-# plots ----
+
+
+
+# -------------------------------------------- plots ---------------------------------
 .BayesianReliabilityPosteriorPlot <- function(jaspResults, model, options) {
 
 	if (!options[["plotPosterior"]])
@@ -453,7 +466,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   plotContainer <- jaspResults[["plotContainer"]]
   if (is.null(plotContainer)) {
     print("Plotcontainer remade")
-    plotContainer <- createJaspContainer("Posteriors Plots")
+    plotContainer <- createJaspContainer("Posterior Plots")
     plotContainer$dependOn(options = c("variables", "reverseScaledItems", "plotPosterior", "shadePlots",
                                        "probTable", "probTableValueLow", "probTableValueHigh", "fixXRange", 
                                        "dispPrior", "noSamples", "noBurnin", "noChains", "noThin",
@@ -478,8 +491,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 
 	if (options[["shadePlots"]] && options[["probTable"]]) {
-	  plotContainer$dependOn("probTableValueLow")
-	  plotContainer$dependOn("probTableValueHigh")
 	  shadePlots <- c(options[["probTableValueLow"]], options[["probTableValueHigh"]])
 	} else {
 	  shadePlots <- NULL
@@ -509,7 +520,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	    plotContainer[[nmsObjs[i]]] <- plotObj
 	  }
 	} else {
-	  plotContainer[["Posterior Distribution"]] <- createJaspPlot()
+	  plotContainer[["Posterior Plots"]] <- createJaspPlot()
 	}
 
 	return()
@@ -620,17 +631,18 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
   if (!options[["dispPPC"]] || !options[["mcDonaldScale"]])
     return()
-
+  
   relyFit <- model[["relyFit"]]
   dataset <- model[["dataset"]]
+  
   if (is.null(relyFit)) {
     g <- NULL
   } else {
     ll <- relyFit[["Bayes"]][["loadings"]]
-    rr <- relyFit[["Bayes"]][["resid.var"]]
-    
+    rr <- relyFit[["Bayes"]][["resid_var"]]
+    print(options[["missings"]])
     cimpl <- ll %*% t(ll) + diag(rr)
-    cobs <- cov(dataset)
+    cobs <- cov(dataset, use = model[["options"]][["missings"]])
     k <- ncol(cobs)
     eframe <- data.frame(number = seq(1, k), eigen_value = eigen(cobs)$values)
     ee_impl <- matrix(0, 1e3, k)
@@ -662,8 +674,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     
     g <- JASPgraphs::themeJasp(g)
   }
-  plot <- createJaspPlot(plot = g, title = "Posterior Predictive Check Omega")
-  plot$dependOn(options = c("dispPPC", "mcDonaldScale", "reverseScaledItems"))
+  plot <- createJaspPlot(plot = g, title = "Posterior Predictive Check Omega", width = 400)
+  plot$dependOn(options = c("variables", "reverseScaledItems", "noSamples", "noBurnin", "noChains", "noThin",
+                            "credibleIntervalValue", "dispPPC", "mcDonaldScale"))
   jaspResults[["OmegaPosteriorPredictive"]] <- plot
 }
 
@@ -919,3 +932,4 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   t <- LaplacesDemon::KLD(x, y)
   t$sum.KLD.py.px
 }
+

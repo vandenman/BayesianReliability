@@ -80,22 +80,26 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       
       dataset <- as.matrix(dataset) # fails for string factors!
       if (length(options[["reverseScaledItems"]]) > 0L) {
-        nvar <- length(variables)
-        key <- rep(1, nvar)
-        key[match(.v(unlist(options[["reverseScaledItems"]])), nvar)] <- -1
-        dataset <- dataset %*% diag(key, nvar, nvar)
+        # nvar <- length(variables)
+        # key <- rep(1, nvar)
+        # key[match(.v(unlist(options[["reverseScaledItems"]])), nvar)] <- -1
+        # dataset <- dataset %*% diag(key, nvar, nvar) # this seems like it does not work
+        cols <- match(unlist(options[["reverseScaledItems"]]), .unv(colnames(dataset)))
+        total <- min(dataset, na.rm = T) + max(dataset, na.rm = T)
+        dataset[ ,cols] = total - dataset[ ,cols]
       }
-      
+
       if (options[["missingValuesF"]] == "excludeCasesPairwise") {missing <- "pairwise"}
       else if (options[["missingValuesF"]] == "excludeCasesListwise") {missing <- "listwise"}
       
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      Bayes = FALSE, n.boot = options[["noSamplesf"]],
-                                     item.dropped = TRUE, omega.freq.method = "cfa", 
+                                     item.dropped = TRUE, omega.freq.method = "pfa", 
                                      alpha.int.analytic = TRUE, 
                                      missing = missing))
       
+      # if fallback on pfa, add an error message ####################################
       if (any(is.na(dataset))) {
         if (!is.null(relyFit[["miss_pairwise"]])) {
           model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
@@ -131,8 +135,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       }
       relyFit$freq$ifitem$mean <- colMeans(dataset, na.rm = T)
       relyFit$freq$ifitem$sd <- apply(dataset, 2, sd, na.rm = T)  
-      
-      
+
       # Consider stripping some of the contents of relyFit to reduce memory load
       if (inherits(relyFit, "try-error")) {
         
@@ -161,19 +164,28 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       scaleCfi <- .frequentistReliabilityCalcCfi(relyFit[["freq"]][["boot"]],             
                                               options[["confidenceIntervalValue"]])
       
-      # omega doesnt work with bootstrapping:
-      tmp <- Bayesrel::strel(dataset, estimates = c("alpha", "omega"), Bayes = F, item.dropped = T, 
-                             alpha.int.analytic = TRUE, omega.freq.method = "cfa", 
-                             interval = options[["confidenceIntervalValue"]]) 
+      # omega cfa doesnt work with bootstrapping:
       # this will work with the github package, so far the interval for omega doesnt change.
-
-      alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 3)]
-      names(alphaCfi) <- c("lower", "upper")
-      scaleCfi$alpha <- alphaCfi
-      omegaCfi <- as.vector(unlist(tmp$freq$conf))[c(2, 4)]
-      names(omegaCfi) <- c("lower", "upper")
-      scaleCfi$omega <- omegaCfi
-      scaleCfi <- scaleCfi[c(7, 1, 2, 3, 8, 4, 5, 6)] # check this when more estimators come in
+      if (relyFit$omega.freq.method == "cfa") {
+        tmp <- Bayesrel::strel(dataset, estimates = c("alpha", "omega"), Bayes = F, item.dropped = T, 
+                               alpha.int.analytic = TRUE, omega.freq.method = "cfa", 
+                               interval = options[["confidenceIntervalValue"]]) 
+        alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 3)]
+        names(alphaCfi) <- c("lower", "upper")
+        scaleCfi$alpha <- alphaCfi
+        omegaCfi <- as.vector(unlist(tmp$freq$conf))[c(2, 4)]
+        names(omegaCfi) <- c("lower", "upper")
+        scaleCfi$omega <- omegaCfi
+        scaleCfi <- scaleCfi[c(7, 1, 2, 3, 8, 4, 5, 6)] # check this when more estimators come in
+      } else {
+        tmp <- Bayesrel::strel(dataset, estimates = c("alpha"), Bayes = F, item.dropped = T, 
+                               alpha.int.analytic = TRUE,
+                               interval = options[["confidenceIntervalValue"]]) 
+        alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 2)]
+        names(alphaCfi) <- c("lower", "upper")
+        scaleCfi$alpha <- alphaCfi
+        scaleCfi <- scaleCfi[c(8, 1, 2, 3, 4, 5, 6, 7)] # check this when more estimators come in
+      }
 
       cfiState <- list(scaleCfi = scaleCfi)
       jaspCfiState <- createJaspState(cfiState)
@@ -186,7 +198,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   
   model[["derivedOptions"]] <- .frequentistReliabilityDerivedOptions(options)
   model[["itemsDropped"]] <- .unv(colnames(dataset))
-  
+
   return(model)
 }
 
@@ -295,9 +307,9 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   
   itemTableF <- createJaspTable("Frequentist Individual Item Reliability Statistics")
   itemTableF$dependOn(options = c("variables",
-                                  "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6ScaleF", "glbScalef", 
+                                  "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef", "glbScalef", 
                                   "averageInterItemCor", "meanScale", "sdScale",
-                                  "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf", "guttman6ItemF", "glbItemf",
+                                  "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf", "guttman6Itemf", "glbItemf",
                                   "reverseScaledItems", "meanItem", "sdItem", "itemRestCor"))
   itemTableF$addColumnInfo(name = "variable", title = "Item", type = "string")
   
@@ -320,6 +332,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       newtb <- cbind(pointEst = relyFit$freq$ifitem[[idx]])
       colnames(newtb) <- paste0(colnames(newtb), i)
       tb <- cbind(tb, newtb)
+      
     }
     itemTableF$setData(tb)
     
@@ -351,10 +364,18 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   opts     <- names(relyFit$freq$omega_fit)
 
   if (!is.null(relyFit)) {
-    allData <- data.frame(
-      measure = opts,
-      value = as.vector(unlist(relyFit$freq$omega_fit, use.names = FALSE))
-    )
+    if (is.null(opts)) {
+      allData <- data.frame(
+        measure = NA_real_,
+        value = NA_real_
+      )
+    } else {
+      allData <- data.frame(
+        measure = opts,
+        value = as.vector(unlist(relyFit$freq$omega_fit, use.names = FALSE))
+      )
+    }
+
 
     fitTable$setData(allData)
   }
