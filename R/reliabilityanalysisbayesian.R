@@ -116,7 +116,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], n.burnin = options[["noBurnin"]], 
-                                     # n.chains = options[["noChains"]], thin = options[["noThin"]],
+                                     n.chains = options[["noChains"]], thin = options[["noThin"]],
                                      freq = F, item.dropped = TRUE, missing = missing))
       
       if (any(is.na(dataset))) {
@@ -419,7 +419,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 .BayesianReliabilityConvergenceTable <- function(jaspResults, model, options) {
   
-  if (!is.null(jaspResults[["convTable"]]) || !options[["convTable"]]) {
+  if (!is.null(jaspResults[["convTable"]]) || !options[["rHat"]]) {
     print("jaspResults[['convTable']] from state or not wanted")
     return()
   }

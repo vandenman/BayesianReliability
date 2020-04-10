@@ -230,9 +230,9 @@ Form
         {
             name: "noChains"
             label: qsTr("No. of chains")
-            defaultValue: 1
+            defaultValue: 3
             fieldWidth: 50
-            min: 1
+            min: 2
             max: 20
         }
         IntegerField
@@ -257,7 +257,6 @@ Form
 		    label: qsTr("Traceplots")
 		  }
 		}
-       
 }
 
 Section
