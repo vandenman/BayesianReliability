@@ -1,7 +1,8 @@
 reliabilityFrequentist <- function(jaspResults, dataset, options) {
-  sink("~/Downloads/log_freq.txt")
-  on.exit(sink(NULL))
-  
+
+    # sink("~/Downloads/log_freq.txt")
+    # on.exit(sink(NULL))
+    
   dataset <- .frequentistReliabilityReadData(dataset, options)
   
   .frequentistReliabilityCheckErrors(dataset, options)
@@ -69,7 +70,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
 
 # estimate reliability ----
 .frequentistReliabilityMainResults <- function(jaspResults, dataset, options) {
-  
+
   model <- jaspResults[["modelObj"]]$object
   relyFit <- model[["relyFit"]]
   if (is.null(model)) {
@@ -93,9 +94,9 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       else if (options[["missingValuesf"]] == "excludeCasesListwise") {missing <- "listwise"}
       
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
-      relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
+      relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      Bayes = FALSE, n.boot = options[["noSamplesf"]],
-                                     item.dropped = TRUE, omega.freq.method = "pfa", 
+                                     item.dropped = TRUE, omega.freq.method = options[["omegaEst"]], 
                                      alpha.int.analytic = TRUE, 
                                      missing = missing))
       
@@ -112,7 +113,13 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         } 
       } else {
         use.cases <- "everything"
-        }
+      }
+      
+      if (relyFit[["freq"]][["omega.error"]]) {
+        model[["footnote"]] <- paste0(model[["footnote"]], " omega estimation method switched to PFA because the CFA
+                                      did not find a solution.")
+      }
+      
       
       # first the scale statistics
       cordat <- cor(dataset, use = use.cases)
@@ -148,7 +155,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         model[["relyFit"]] <- relyFit
         
         stateObj <- createJaspState(model)
-        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf"))
+        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf", "omegaEst"))
         jaspResults[["modelObj"]] <- stateObj
 
       }
@@ -243,7 +250,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   scaleTableF <- createJaspTable("Frequentist Scale Reliability Statistics")
   scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef",
                                    "glbScalef", "reverseScaledItems", "confidenceIntervalValue", "noSamplesf", 
-                                   "averageInterItemCor", "meanScale", "sdScale", "missingValuesf"))
+                                   "averageInterItemCor", "meanScale", "sdScale", "missingValuesf", "omegaEst"))
   
   overTitle <- sprintf("%s%% Confidence interval",
                        format(100*options[["confidenceIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -310,7 +317,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                   "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef", "glbScalef", 
                                   "averageInterItemCor", "meanScale", "sdScale",
                                   "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf", "guttman6Itemf", "glbItemf",
-                                  "reverseScaledItems", "meanItem", "sdItem", "itemRestCor", "missingValuesf"))
+                                  "reverseScaledItems", "meanItem", "sdItem", "itemRestCor", "missingValuesf", 
+                                  "omegaEst"))
   itemTableF$addColumnInfo(name = "variable", title = "Item", type = "string")
   
   idxSelectedF <- which(itemDroppedSelectedF)

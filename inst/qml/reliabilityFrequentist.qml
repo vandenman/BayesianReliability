@@ -24,12 +24,20 @@ Form
         label:  qsTr("McDonald's ω")         
         id:     mcdonaldf
         
+        RadioButtonGroup {
+        title: qsTr("Estimation Method")
+        name: "omegaEst"
+        RadioButton {value: "cfa"; label: qsTr("CFA"); checked: true
         CheckBox
         {
           name:     "fitMeasures"	
           label:    qsTr("Single Factor Model Fit")         
           enabled:  mcdonaldf.checked
         }
+        }
+        RadioButton { value: "pfa"; label: qsTr("PFA")}
+        }
+
       }
       CheckBox 
       {     

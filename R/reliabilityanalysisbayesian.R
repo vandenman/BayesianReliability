@@ -1,7 +1,7 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
-
-  sink("~/Downloads/log_Bay.txt")
-  on.exit(sink(NULL))
+# 
+#   sink("~/Downloads/log_Bay.txt")
+#   on.exit(sink(NULL))
   
 
 	dataset <- .BayesianReliabilityReadData(dataset, options)
@@ -16,7 +16,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	.BayesianReliabilityPosteriorPlot(      jaspResults, model, options)
 	.BayesianReliabilityPosteriorPredictive(jaspResults, model, options)
 	.BayesianReliabilityIfItemPlot(         jaspResults, model, options)
-	# .BayesianReliabilityConvergenceTable(   jaspResults, model, options)
+	.BayesianReliabilityConvergenceTable(   jaspResults, model, options)
 	.BayesianReliabilityTracePlot(          jaspResults, model, options)
 	  
 
@@ -113,9 +113,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
           options[["missings"]] <- "complete.obs"
           }
       }
-      print(options[["missingValues"]])
       model[["footnote"]] <- .BayesianReliabilityCheckLoadings(dataset, variables)
-      relyFit <- try(Bayesrel::strel(x = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
+      relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], n.burnin = options[["noBurnin"]], 
                                      # n.chains = options[["noChains"]], thin = options[["noThin"]],
                                      freq = F, item.dropped = TRUE, missing = missing))

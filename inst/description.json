@@ -13,7 +13,7 @@
 	},
 
 	"requiredPackages":	[{"package":"Rdpack"}, 
-	                     {"package":"Bayesrel"},
+	                     {"package":"Bayesrel", "version": "0.6.4"},
 	                     {"package":"Rcsdp", "version": "0.1.57"}],
 
 	"menu":
