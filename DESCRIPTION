@@ -2,10 +2,10 @@ Package: DevelopmentModule
 Type: Package
 Title: Reliability Module for JASP
 Version: 0.1
-Date: 2020-04-10
+Date: 2020-04-16
 Author: Julius M. Pfadt, Don van den Bergh & Eric-Jan Wagenmakers
 Website: https://github.com/juliuspf/reliabilityBayesian
 Maintainer: Julius M. Pfadt <julius.pfadt@gmail.com>
 Description: TODO
 License: GPL (>= 2)
-Imports: Rdpack, Bayesrel (>= 0.6.4), Rcsdp (>= 0.1.57)
+Imports: Rdpack, Bayesrel, Rcsdp (>= 0.1.57)

@@ -114,15 +114,18 @@ Form
           enabled: mcdonaldItem.checked || cronbachItem.checked || lambda2Item.checked || glbItem.checked;
           id: plotItem
           
-          CheckBox {
-            name: "orderItemKL";
-            label: qsTr("Order items by KL-distance");
-            enabled: plotItem.checked;
-          }
-          CheckBox {
-            name: "orderItemKS";
-            label: qsTr("Order items by KS-distance");
-            enabled: plotItem.checked
+          CheckBox 
+          { 
+            name: "orderItem";     				
+            label: qsTr("Order items");	
+            enabled: plotItem.checked  
+          
+            RadioButtonGroup {
+              title: qsTr("")
+              name: "orderType"
+              RadioButton { value: "orderItemKL"; label: qsTr("Order items by KL-distance")}
+              RadioButton { value: "orderItemKS"; label: qsTr("Order items by KS-distance")}
+            }
           }
         }
         
@@ -233,7 +236,7 @@ Form
             defaultValue: 3
             fieldWidth: 50
             min: 2
-            max: 20
+            max: 100
         }
         IntegerField
         {

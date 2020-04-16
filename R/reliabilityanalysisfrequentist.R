@@ -90,8 +90,16 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         dataset[ ,cols] = total - dataset[ ,cols]
       }
 
-      if (options[["missingValuesf"]] == "excludeCasesPairwise") {missing <- "pairwise"}
-      else if (options[["missingValuesf"]] == "excludeCasesListwise") {missing <- "listwise"}
+      if (options[["missingValuesf"]] == "excludeCasesPairwise") {
+        missing <- "pairwise"
+      }      else {
+        pos <- which(is.na(dataset), arr.ind = T)[, 1]
+        dataset <- dataset[-pos, ] 
+      }
+      # else if (options[["missingValuesf"]] == "excludeCasesListwise") {
+      #   missing <- "listwise"
+      #   }
+
       
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
       relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
@@ -101,21 +109,17 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                      missing = missing))
       
       # if fallback on pfa, add an error message ####################################
-      if (any(is.na(dataset))) {
-        if (!is.null(relyFit[["miss_pairwise"]])) {
-          model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
-          use.cases <- "pairwise.complete.obs"
-        } 
-        if (!is.null(relyFit[["complete"]])) {
-          model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", relyFit[["complete"]], 
-                                        " listwise complete cases.")
-          use.cases <- "complete.obs"
-        } 
+
+      if (!is.null(relyFit[["miss_pairwise"]])) {
+        model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
+        use.cases <- "pairwise.complete.obs"
       } else {
-        use.cases <- "everything"
+        model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", nrow(dataset), 
+                                      " complete cases.")
+        use.cases <- "complete.obs"
       }
       
-      if (relyFit[["freq"]][["omega.error"]]) {
+      if (!is.null(relyFit[["freq"]][["omega.error"]])) {
         model[["footnote"]] <- paste0(model[["footnote"]], " omega estimation method switched to PFA because the CFA
                                       did not find a solution.")
       }
@@ -126,6 +130,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       relyFit$freq$est$avg_cor <- mean(cordat[lower.tri(cordat)])
       relyFit$freq$est$mean <- mean(rowMeans(dataset, na.rm = T))
       relyFit$freq$est$sd <- sd(colMeans(dataset, na.rm = T))
+
 
       
       corsamp <- apply(relyFit$freq$covsamp, c(1), cov2cor)
@@ -173,7 +178,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       
       # omega cfa doesnt work with bootstrapping:
       # this will work with the github package, so far the interval for omega doesnt change.
-      if (relyFit$omega.freq.method == "cfa") {
+      if (is.null(relyFit[["freq"]][["omega.pfa"]])) { 
         tmp <- Bayesrel::strel(dataset, estimates = c("alpha", "omega"), Bayes = F, item.dropped = T, 
                                alpha.int.analytic = TRUE, omega.freq.method = "cfa", 
                                interval = options[["confidenceIntervalValue"]]) 
@@ -363,7 +368,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   }
 
   fitTable <- createJaspTable(sprintf("Fit Measures of Single Factor Model Fit"))
-  fitTable$dependOn(options = c("variables", "mcDonaldScalef", "reverseScaledItems", "fitMeasures", "missingValuesf"))
+  fitTable$dependOn(options = c("variables", "mcDonaldScalef", "reverseScaledItems", "fitMeasures", "missingValuesf", 
+                                "omegaEst"))
   fitTable$addColumnInfo(name = "measure", title = "Fit Measure",   type = "string")
   fitTable$addColumnInfo(name = "value",     title = "Value", type = "number")
 
