@@ -29,37 +29,30 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
   # order of appearance in Bayesrel
   derivedOptions <- list(
-    selectedEstimators  = unlist(options[c("alphaScale", "guttman2Scale", "guttman6Scale", "glbScale", "mcDonaldScale",
+    selectedEstimators  = unlist(options[c("mcDonaldScale", "alphaScale", "guttman2Scale", "guttman6Scale", "glbScale",
                                            "averageInterItemCor", "meanScale", "sdScale")]),
-    selectedEstimatorsPlots  = unlist(options[c("alphaScale", "guttman2Scale", "guttman6Scale", 
-                                                "glbScale", "mcDonaldScale")]),
+    selectedEstimatorsPlots  = unlist(options[c("mcDonaldScale", "alphaScale", "guttman2Scale", "guttman6Scale", 
+                                                "glbScale")]),
     itemDroppedSelected = unlist(options[c("mcDonaldItem", "alphaItem", "guttman2Item", "guttman6Item","glbItem",
                                            "itemRestCor", "meanItem", "sdItem")]),
     itemDroppedSelectedItem = unlist(options[c("mcDonaldItem", "alphaItem", "guttman2Item", "guttman6Item", 
                                                "glbItem")]),
 
     namesEstimators     = list(
-      tables = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Guttman's \u03BB6", "Greatest Lower Bound", 
-                 "McDonald's \u03C9", "Average interitem correlation", "mean", "sd"),
-      tables_item = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Guttman's \u03BB6", "Greatest Lower Bound", 
-                 "McDonald's \u03C9", "Item-rest correlation", "mean", "sd"),
-      coefficients = c("Cronbach's \u03B1", "Guttman's \u03BB2", "Guttman's \u03BB6", "Greatest Lower Bound", 
-                       "McDonald's \u03C9", "Item-rest correlation"),
-      plots = list(expression("Cronbach\'s"~alpha), expression("Guttman's"~lambda[2]), 
-                   expression("Guttman's"~lambda[6]), "Greatest Lower Bound", expression("McDonald's"~omega))
+      tables = c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2", "Guttman's \u03BB6", 
+                 "Greatest Lower Bound", "Average interitem correlation", "mean", "sd"),
+      tables_item = c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2", "Guttman's \u03BB6", 
+                      "Greatest Lower Bound", "Item-rest correlation", "mean", "sd"),
+      coefficients = c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2", "Guttman's \u03BB6", 
+                       "Greatest Lower Bound", "Item-rest correlation"),
+      plots = list(expression("McDonald's"~omega), expression("Cronbach\'s"~alpha), expression("Guttman's"~lambda[2]), 
+                   expression("Guttman's"~lambda[6]), "Greatest Lower Bound")
     )
 
   )
-  # order to show in JASP
-  derivedOptions[["order"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2", 
-                                       "Guttman's \u03BB6",  "Greatest Lower Bound", "Average interitem correlation", 
-                                       "mean", "sd"), 
-                                     derivedOptions[["namesEstimators"]][["tables"]])
-  derivedOptions[["order_item"]] <- match(c("McDonald's \u03C9", "Cronbach's \u03B1", "Guttman's \u03BB2", 
-                                            "Guttman's \u03BB6", "Greatest Lower Bound", "Item-rest correlation", 
-                                            "mean", "sd"), 
-                                     derivedOptions[["namesEstimators"]][["tables_item"]])
-
+  # order to show in JASP : check that again when more or different estimators are included
+  derivedOptions[["order"]] <- c(5, 1, 2, 3, 4, 6, 7, 8)
+  # derivedOptions[["order_item"]] <- c(5, 1, 2, 3, 4, 6, 7, 8)
 
   return(derivedOptions)
 }
@@ -158,8 +151,16 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       relyFit$Bayes$ifitem$est$sd <- apply(dataset, 2, sd, na.rm = T)
       relyFit$Bayes$ifitem$samp$mean <- (matrix(NA_real_, ncol(dataset), 2))
       relyFit$Bayes$ifitem$samp$sd <- (matrix(NA_real_, ncol(dataset), 2))
-
       
+      ops <- .BayesianReliabilityDerivedOptions(options)
+      order <- ops[["order"]]
+      relyFit[["Bayes"]][["samp"]] <- relyFit[["Bayes"]][["samp"]][order]
+      relyFit[["Bayes"]][["est"]] <- relyFit[["Bayes"]][["est"]][order]
+      
+      relyFit[["Bayes"]][["ifitem"]][["samp"]] <- relyFit[["Bayes"]][["ifitem"]][["samp"]][order]
+      relyFit[["Bayes"]][["ifitem"]][["est"]] <- relyFit[["Bayes"]][["ifitem"]][["est"]][order]
+      
+
       # Consider stripping some of the contents of relyFit to reduce memory load
       if (inherits(relyFit, "try-error")) {
 
@@ -262,13 +263,14 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	opts     <- derivedOptions[["namesEstimators"]][["tables"]]
 	order    <- derivedOptions[["order"]]
 	selected <- derivedOptions[["selectedEstimators"]]
-
+	idxSelected <- which(selected)
+  
 	if (!is.null(relyFit)) {
 	  allData <- cbind.data.frame(
 	    statistic = opts,
 	    postMean = unlist(relyFit$Bayes$est, use.names = FALSE),
-	    do.call(rbind, model[["cri"]][["scaleCri"]])
-	  )[order, ][selected[order], ] # TODO: <- simplify this
+	    do.call(rbind, model[["cri"]][["scaleCri"]]))[idxSelected, ]
+	  # )[order, ][selected[order], ] # TODO: <- simplify this
 
 		scaleTable$setData(allData)
 
@@ -277,7 +279,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 	} else if (sum(selected) > 0L) {
 
-    scaleTable[["statistic"]] <- opts[order][selected[order]]
+    # scaleTable[["statistic"]] <- opts[order][selected[order]]
+	  scaleTable[["statistic"]] <- opts
+	  
 
     nvar <- length(options[["variables"]])
     if (nvar > 0L && nvar < 3L)
@@ -290,7 +294,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	  scaleTable$addFootnote(model[["footnote"]])
 
 	jaspResults[["scaleTable"]] <- scaleTable
-
 	return()
 }
 
@@ -304,8 +307,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
   derivedOptions <- model[["derivedOptions"]]
   itemDroppedSelected <- derivedOptions[["itemDroppedSelected"]]
-  order <- derivedOptions[["order_item"]]
-  overTitles <- format(derivedOptions[["namesEstimators"]][["tables_item"]][order], digits = 3, drop0trailing = T)
+  # order <- derivedOptions[["order_item"]]
+  overTitles <- format(derivedOptions[["namesEstimators"]][["tables_item"]], digits = 3, drop0trailing = T)
   overTitles <- paste0(overTitles, " (if item dropped)")
   
   cred <- format(100*options[["credibleIntervalValue"]], digits = 3, drop0trailing = TRUE)
@@ -316,21 +319,29 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
                                  "mcDonaldItem",  "alphaItem",  "guttman2Item",  "guttman6Item", "glbItem",
                                  "reverseScaledItems", "credibleIntervalValue", 
                                  "itemRestCor", "meanItem", "sdItem", "missingValues"))
+  
   itemTable$addColumnInfo(name = "variable", title = "Item", type = "string")
 
   idxSelected <- which(itemDroppedSelected)
-  estimators <- derivedOptions[["namesEstimators"]][["tables_item"]][order]
+  estimators <- derivedOptions[["namesEstimators"]][["tables_item"]]
   coefficients <- derivedOptions[["namesEstimators"]][["coefficients"]]
   
   for (i in idxSelected) {
     if (estimators[i] %in% coefficients) {
-      if (estimators[i] == "Item-rest correlation") {
+      if (estimators[i] == "Item-rest correlation") { # no item deleted for item rest cor
         itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
                                 overtitle = "Item-rest correlation")
         itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
                                 overtitle = "Item-rest correlation")
         itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Upper ", cred, "%"), type = "number", 
                                 overtitle = "Item-rest correlation")
+      } else if (estimators[i] == "McDonald's \u03C9") { # not median but mean for omega
+        itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Mean", type = "number", 
+                                overtitle = overTitles[i])
+        itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
+                                overtitle = overTitles[i])
+        itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Upper ", cred, "%"), type = "number", 
+                                overtitle = overTitles[i])
       } else {
         itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
                                 overtitle = overTitles[i])
@@ -350,11 +361,10 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     cris <- model[["cri"]][["itemCri"]]
     tb <- data.frame(variable = model[["itemsDropped"]])
     for (i in idxSelected) {
-      idx <- order[i]
-      if (idx %in% c(1:6)) { # check this when more estimators are included !!!!!!!!!!!!!!!!!!!!!
-        newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[idx]], cris[[idx]])
+      if (i %in% c(1:6)) { # check this when more estimators are included !!!!!!!!!!!!!!!!!!!!!
+        newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[i]], cris[[i]])
       } else {
-        newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[idx]])
+        newtb <- cbind(postMean = relyFit$Bayes$ifitem$est[[i]])
       }
       colnames(newtb) <- paste0(colnames(newtb), i)
       tb <- cbind(tb, newtb)
@@ -362,7 +372,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 		itemTable$setData(tb)
 
   } else if (length(model[["itemsDropped"]]) > 0) {
-    itemTable[["variables"]] <- model[["itemsDropped"]]
+    itemTable[["variable"]] <- model[["itemsDropped"]]
   }
 
   jaspResults[["itemTable"]] <- itemTable
@@ -392,33 +402,38 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
   relyFit <- model[["relyFit"]]
 	derivedOptions <- model[["derivedOptions"]]
-	opts     <- derivedOptions[["namesEstimators"]][["tables"]]
 	order    <- derivedOptions[["order"]]
+	order <- order[1:(length(order)-3)] # dont need avgCor, mean and sd 
+	opts     <- derivedOptions[["namesEstimators"]][["tables"]]
 	selected <- derivedOptions[["selectedEstimatorsPlots"]]
-	idx      <- which(selected)
-  
+	idxSelected  <- which(selected)
+
+
 	n.item <- dim(relyFit$Bayes$covsamp)[3]
 	prior <- priors[[as.character(n.item)]] 
+	prior <- prior[order]
   end <- length(prior[[1]][["x"]])
   poslow <- end - sum(prior[[1]][["x"]] > options[["probTableValueLow"]]) 
   poshigh <- end - sum(prior[[1]][["x"]] > options[["probTableValueHigh"]]) 
   # since the priors are only available in density form, the prior probability for the estimator being larger than
   # a cutoff is given by caculating the relative probability of the density from the cutoff to 1.
-  # maybe check this with Don though
+  # maybe check this with someone though
   
 	if (!is.null(relyFit)) {
     probsPost <- numeric(sum(selected))
     probsPrior <- numeric(sum(selected))
-    for (i in seq_along(idx)) {
-      probsPost[i] <- mean(relyFit[["Bayes"]][["samp"]][[idx[i]]] > options[["probTableValueLow"]]) -
-                      mean(relyFit[["Bayes"]][["samp"]][[idx[i]]] > options[["probTableValueHigh"]])
-      probsPrior[i] <- sum(prior[[idx[i]]][["y"]][poslow:end]) / sum(prior[[idx[i]]][["y"]]) - 
-                       sum(prior[[idx[i]]][["y"]][poshigh:end]) / sum(prior[[idx[i]]][["y"]])
+    z <- 1
+    for (i in idxSelected) {
+      probsPost[z] <- mean(relyFit[["Bayes"]][["samp"]][[i]] > options[["probTableValueLow"]]) -
+                      mean(relyFit[["Bayes"]][["samp"]][[i]] > options[["probTableValueHigh"]])
+      probsPrior[z] <- sum(prior[[i]][["y"]][poslow:end]) / sum(prior[[i]][["y"]]) - 
+                       sum(prior[[i]][["y"]][poshigh:end]) / sum(prior[[i]][["y"]])
+      z <- z+1 # very bulky thing to do here
     }
-    df <- data.frame(statistic = opts[idx], prior = probsPrior, posterior = probsPost)
+    df <- data.frame(statistic = opts[idxSelected], prior = probsPrior, posterior = probsPost)
     probTable$setData(df)
   } else if (sum(selected) > 0) {
-    probTable[["statistic"]] <- opts[idx]
+    probTable[["statistic"]] <- opts[idxSelected]
   }
 
   jaspResults[["probTable"]] <- probTable
@@ -435,27 +450,31 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   convTable <- createJaspTable(
     sprintf("Convergence Diagnostics"))
   convTable$dependOn(options = c("variables", "mcDonaldScale", "alphaScale", "guttman2Scale", "guttman6Scale",
-                                 "glbScale", "reverseScaledItems", "rHat", "missingValues"))
+                                 "glbScale", "reverseScaledItems", "rHat", "missingValues", "noSamples", "noBurnin", 
+                                 "noChains", "noThin"))
   convTable$addColumnInfo(name = "statistic", title = "Statistic",   type = "string")
   convTable$addColumnInfo(name = "rhat",     title = "R-hat", type = "number")
   
   relyFit <- model[["relyFit"]]
   derivedOptions <- model[["derivedOptions"]]
-  opts     <- derivedOptions[["namesEstimators"]][["tables"]]
   order    <- derivedOptions[["order"]]
-  selected <- derivedOptions[["selectedEstimators"]]
-  idx      <- which(selected)
+  order <- order[1:(length(order)-3)] # dont need avgCor, mean and sd 
+  opts     <- derivedOptions[["namesEstimators"]][["tables"]]
+  selected <- derivedOptions[["selectedEstimatorsPlots"]]
+  idxSelected <- which(selected)
   
   if (!is.null(relyFit)) {
     rhat <- numeric(sum(selected))
-    for (i in seq_along(idx)) {
-      tmp <- lapply(as.data.frame(t(relyFit[["Bayes"]][["samp"]][[idx[i]]])), coda::mcmc)
-      rhat[i] <- coda::gelman.diag(coda::as.mcmc.list(tmp))[["psrf"]][, 1]
+    z <- 1
+    for (i in idxSelected) {
+      tmp <- lapply(as.data.frame(t(relyFit[["Bayes"]][["chains"]][[i]])), coda::mcmc)
+      rhat[z] <- coda::gelman.diag(coda::as.mcmc.list(tmp))[["psrf"]][, 1]
+      z <- z+1
     }
-    df <- data.frame(statistic = opts[idx], rhat = rhat)
+    df <- data.frame(statistic = opts[idxSelected], rhat = rhat)
     convTable$setData(df)
   } else if (sum(selected) > 0) {
-    convTable[["statistic"]] <- opts[idx]
+    convTable[["statistic"]] <- opts[idxSelected]
   }
   jaspResults[["convTable"]] <- convTable
   return()
@@ -487,16 +506,16 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 	derivedOptions <- model[["derivedOptions"]]
 	order     <- derivedOptions[["order"]]
-	indices   <- which(derivedOptions[["selectedEstimatorsPlots"]][order])
-	nmsLabs   <- derivedOptions[["namesEstimators"]][["plots"]][order]
-	nmsObjs   <- derivedOptions[["namesEstimators"]][["tables"]][order]
+	order <- order[1:(length(order)-3)] # dont need avgCor, mean and sd 
+	indices   <- which(derivedOptions[["selectedEstimatorsPlots"]])
+	nmsLabs   <- derivedOptions[["namesEstimators"]][["plots"]]
+	nmsObjs   <- derivedOptions[["namesEstimators"]][["tables"]]
 
 	relyFit  <- model[["relyFit"]]
 	# probably better to do this once directly after computation!
-	scaleCri <- model[["cri"]][["scaleCri"]][order]
-	relyFit[["Bayes"]][["samp"]] <- relyFit[["Bayes"]][["samp"]][order]
+	scaleCri <- model[["cri"]][["scaleCri"]]
 	n.item <- dim(relyFit$Bayes$covsamp)[3]
-	prior <- priors[[as.character(n.item)]][c(5, 1, 2, 3, 4)] ##### change this when more estimators are included!!!
+	prior <- priors[[as.character(n.item)]][order] ##### change this when more estimators are included!!!
 
 
 	if (options[["shadePlots"]] && options[["probTable"]]) {
@@ -589,6 +608,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	ggplot2::geom_text(data = datTxt, mapping = ggplot2::aes(x = x, y = y, label = label), inherit.aes = FALSE) +
 	ggplot2::scale_y_continuous(name = "Density", breaks = yBreaks, limits = range(yBreaks)) +
 	ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand)
+# ggplot2::scale_x_continuous(name = nms, expand = xExpand)
+	
 	
 	if (!is.null(shade)) {
 	  datFilter <- datDens[datDens[["x"]] >= shade[1] & datDens[["x"]] <= shade[2], ]
@@ -602,9 +623,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	  g <- g + ggplot2::geom_line(data = datPrior, mapping = ggplot2::aes(x = x, y = y),
 	                              linetype = "dashed", size = .85) +
 	           ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand,
-	                                       limits= c(min(xBreaks), max(xBreaks)))
-	           # ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand, 
-	           #                             limits= c(min(d$x), max(d$x)))
+	                                       limits = c(min(xBreaks), max(xBreaks)))
+            # ggplot2::scale_x_continuous(name = nms, expand = xExpand,
+            #                   limits = c(min(xBreaks), max(xBreaks)))
 	  
 
 	  
@@ -707,24 +728,19 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   
   derivedOptions <- model[["derivedOptions"]]
   order     <- derivedOptions[["order"]]
-  order_item  <- derivedOptions[["order_item"]]
+  order <- order[1:(length(order)-3)] # dont need itemrestCor, mean and sd 
   indices   <- which(derivedOptions[["itemDroppedSelectedItem"]])
-  nmsLabs   <- derivedOptions[["namesEstimators"]][["plots"]][order_item]
-  nmsObjs   <- derivedOptions[["namesEstimators"]][["tables_item"]][order_item]
+  nmsLabs   <- derivedOptions[["namesEstimators"]][["plots"]]
+  nmsObjs   <- derivedOptions[["namesEstimators"]][["tables_item"]]
   
   relyFit  <- model[["relyFit"]]
-  # probably better to do this once directly after computation!
-  relyFit[["Bayes"]][["samp"]] <- relyFit[["Bayes"]][["samp"]][order]
-  relyFit[["Bayes"]][["ifitem"]][["samp"]] <- relyFit[["Bayes"]][["ifitem"]][["samp"]][order_item]
   
   if (options[["orderItem"]]) {
       ordering <- options[["orderType"]]
   } else {ordering <- NULL}
-
   if (!is.null(relyFit)) {
     for (i in indices) {
       if (is.null(plotContainerItem[[nmsObjs[i]]])) {
-        
         p <- .BayesianReliabilityMakeIfItemPlot(relyFit, i, nmsLabs[[i]], options[["credibleIntervalValue"]], 
                                                 ordering = ordering)
         plotObjItem <- createJaspPlot(plot = p, title = nmsObjs[i])
@@ -750,65 +766,68 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   return()
 }
 
-.BayesianReliabilityMakeIfItemPlot <- function(relyFit, i, nms, int, ordering) {
-  
+.BayesianReliabilityMakeIfItemPlot <- function(relyFit, j, nms, int, ordering) {
   n_row <- length(unlist(relyFit$Bayes$ifitem$est[1]))
   lower <- (1-int)/2
   upper <- int + (1-int)/2
 
-  dat <- data.frame(as.matrix(unlist(relyFit$Bayes$samp[[i]])), row.names =  NULL)
+  dat <- data.frame(as.matrix(unlist(relyFit$Bayes$samp[[j]])), row.names =  NULL)
   names(dat) <- "value"
   dat$colos <- "1"
   dat$var <- "original"
   
-  dat_del <- t(as.matrix(as.data.frame(relyFit$Bayes$ifitem$samp[[i]])))
-  
+  dat_del <- t(as.matrix(as.data.frame(relyFit$Bayes$ifitem$samp[[j]])))
   names <- NULL
-  z <- 1
   for(i in n_row:1){
-    names[z] <- paste0("x", i)
-    z <- z+1
+    names[i] <- paste0("x", i)
   }
-  
-  z <- 1
   for (i in n_row:1){
     tmp <- as.data.frame(dat_del[i, ])
     colnames(tmp) <- "value"
-    tmp$var <- names[z]
+    tmp$var <- names[i]
     tmp$colos <- "2"
     dat <- rbind(dat, tmp)
-    z <- z+1
   }
   dat$var <- factor(dat$var, levels = unique(dat$var))
   
   if (!is.null(ordering)) {
-    if (ordering == "orderItemKL") {
-      est <- as.data.frame(relyFit$Bayes$ifitem$est[[i]])
+    if (ordering == "orderItemMean") {
+      est <- as.data.frame(relyFit$Bayes$ifitem$est[[j]])
       est[n_row + 1, ] <- 1
       colnames(est) <- "value"
       est$name <- c(names, "original")
-      samps <- relyFit$Bayes$ifitem$samp[[i]]
-      og_samp <- relyFit$Bayes$samp[[i]]
+      dists <- abs(relyFit$Bayes$est[[j]] - relyFit$Bayes$ifitem$est[[j]]) # the first one is not ordered, but the ifitem samp is ordered, 
+      # finally do the ordering once after computing the results
+      dists[length(dists)+1] <- 0
+      est <- est[order(dists, decreasing = F), ]
+      dat$var <- factor(dat$var, levels = c(est$name))
+
+    } else if (ordering == "orderItemKL") {
+      est <- as.data.frame(relyFit$Bayes$ifitem$est[[j]])
+      est[n_row + 1, ] <- 1
+      colnames(est) <- "value"
+      est$name <- c(names, "original")
+      samps <- relyFit$Bayes$ifitem$samp[[j]]
+      og_samp <- relyFit$Bayes$samp[[j]]
       dists <- apply(samps, 2, .KLD.statistic, y = og_samp) # kl divergence
       dists[length(dists)+1] <- 0
       est <- est[order(dists), ]
       dat$var <- factor(dat$var, levels = c(est$name))
-    
+      
     } else if (ordering == "orderItemKS") {
-      est <- as.data.frame(relyFit$Bayes$ifitem$est[[i]])
+      est <- as.data.frame(relyFit$Bayes$ifitem$est[[j]])
       est[n_row + 1, ] <- 1
       colnames(est) <- "value"
       est$name <- c(names, "original")
-      samps <- relyFit$Bayes$ifitem$samp[[i]]
-      og_samp <- relyFit$Bayes$samp[[i]]
+      samps <- relyFit$Bayes$ifitem$samp[[j]]
+      og_samp <- relyFit$Bayes$samp[[j]]
       dists <- apply(samps, 2, .ks.test.statistic, y = og_samp) # ks distance
       dists[length(dists)+1] <- 0
       est <- est[order(dists), ]
       dat$var <- factor(dat$var, levels = c(est$name))
     }
   }
-  
-  
+
   g <- ggplot2::ggplot(dat, ggplot2::aes(x = value, y = var, fill = colos)) +
     ggridges::stat_density_ridges(quantile_lines = T, quantiles = c(lower, 0.5, upper),
                                   alpha = .85, show.legend = F, scale = 1) +
@@ -830,7 +849,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 }
 
   
-
 .BayesianReliabilityTracePlot <- function(jaspResults, model, options) {
   
   if (!options[["tracePlot"]])
@@ -850,13 +868,12 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   
   derivedOptions <- model[["derivedOptions"]]
   order     <- derivedOptions[["order"]]
-  indices   <- which(derivedOptions[["selectedEstimatorsPlots"]][order])
-  nmsLabs   <- derivedOptions[["namesEstimators"]][["plots"]][order]
-  nmsObjs   <- derivedOptions[["namesEstimators"]][["tables"]][order]
+  order <- order[1:(length(order)-3)] # dont need avgCor, mean and sd 
+  indices   <- which(derivedOptions[["selectedEstimatorsPlots"]])
+  nmsLabs   <- derivedOptions[["namesEstimators"]][["plots"]]
+  nmsObjs   <- derivedOptions[["namesEstimators"]][["tables"]]
   
   relyFit  <- model[["relyFit"]]
-  # probably better to do this once directly after computation!
-  relyFit[["Bayes"]][["samp"]] <- relyFit[["Bayes"]][["samp"]][order]
   
   # xlim <- JASPgraphs::getPrettyAxisBreaks(c(0, (options[["noSamples"]] - options[["noBurnin"]]) * 
   #                                             options[["noChains"]] / options[["noThin"]]))
@@ -899,7 +916,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   
   g <- ggplot2::ggplot(dt, ggplot2::aes(x = Iterations, y = Value)) +
     ggplot2::geom_line() +
-    ggplot2::ylab(nms) + 
+    ggplot2::ylab(nms)
     # ggplot2::scale_x_continuous(name = "Iterations", breaks = xlim, limits = range(xlim))
 
     

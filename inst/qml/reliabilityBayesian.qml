@@ -123,6 +123,7 @@ Form
             RadioButtonGroup {
               title: qsTr("")
               name: "orderType"
+              RadioButton { value: "orderItemMean"; label: qsTr("Order items by mean"); checked: true}
               RadioButton { value: "orderItemKL"; label: qsTr("Order items by KL-distance")}
               RadioButton { value: "orderItemKS"; label: qsTr("Order items by KS-distance")}
             }
@@ -215,8 +216,8 @@ Form
         {
             name: "noSamples"
             label: qsTr("No. of posterior samples")
-            defaultValue: 500
-            fieldWidth: 50
+            defaultValue: 1000
+            fieldWidth: 100
             min: 100
             max: 1e7
         }
