@@ -1,5 +1,5 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
-# 
+
   sink("~/Downloads/log_Bay.txt")
   on.exit(sink(NULL))
   
@@ -554,6 +554,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	return()
 }
 
+
 .BayesianReliabilityMakeSinglePosteriorPlot <- function(relyFit, scaleCri, i, nms, fixXRange, 
                                                         shade = NULL, priorTrue, priorSample) {
 
@@ -569,7 +570,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	
 
 
-	xBreaks <- JASPgraphs::getPrettyAxisBreaks(datDens$x)
+	# xBreaks <- JASPgraphs::getPrettyAxisBreaks(datDens$x)
+	xBreaks <- pretty(datDens$x, n = 4)
+	print(xBreaks)
 	# max height posterior is at 90% of plot area; remainder is for credible interval
 	ymax <- max(d$y) / .9
 	yBreaks <- JASPgraphs::getPrettyAxisBreaks(c(0, ymax))
@@ -607,7 +610,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	  #                          inherit.aes = FALSE, segment.alpha = 0) +
 	ggplot2::geom_text(data = datTxt, mapping = ggplot2::aes(x = x, y = y, label = label), inherit.aes = FALSE) +
 	ggplot2::scale_y_continuous(name = "Density", breaks = yBreaks, limits = range(yBreaks)) +
-	ggplot2::scale_x_continuous(name = nms, breaks = xBreaks, expand = xExpand)
+	ggplot2::scale_x_continuous(name = nms, breaks = (xBreaks), expand = xExpand)
 # ggplot2::scale_x_continuous(name = nms, expand = xExpand)
 	
 	
@@ -924,6 +927,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   
 }
 
+.numformat <- function(val) { sub("^(-?)0.", "\\1.", sprintf("%.2f", val)) }
 
 
 
