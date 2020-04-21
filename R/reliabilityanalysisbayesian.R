@@ -916,8 +916,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   
   g <- ggplot2::ggplot(dt, ggplot2::aes(x = Iterations, y = Value)) +
     ggplot2::geom_line() +
-    ggplot2::ylab(nms)
-    # ggplot2::scale_x_continuous(name = "Iterations", breaks = xlim, limits = range(xlim))
+    ggplot2::ylab(nms) +
+    ggplot2::scale_x_continuous(name = "Iterations", breaks = seq(0, xlim, 500), limits = c(0, xlim))
 
     
   return(JASPgraphs::themeJasp(g))
