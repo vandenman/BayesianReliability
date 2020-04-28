@@ -173,26 +173,26 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       scaleCfi <- .frequentistReliabilityCalcCfi(relyFit[["freq"]][["boot"]],             
                                               options[["confidenceIntervalValue"]])
       
+      # alpha int is analytical, not from the boot sample, so:
+      tmp <- Bayesrel::strel(dataset, estimates = c("alpha"), Bayes = F,
+                             alpha.int.analytic = TRUE,
+                             interval = options[["confidenceIntervalValue"]]) 
+      alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 2)]
+      names(alphaCfi) <- c("lower", "upper")
+      scaleCfi$alpha <- alphaCfi
+      
       # omega cfa doesnt work with bootstrapping:
       # this will work with the github package, so far the interval for omega doesnt change.
       if (is.null(relyFit[["freq"]][["omega.pfa"]])) { 
-        tmp <- Bayesrel::strel(dataset, estimates = c("alpha", "omega"), Bayes = F, item.dropped = T, 
-                               alpha.int.analytic = TRUE, omega.freq.method = "cfa", 
-                               interval = options[["confidenceIntervalValue"]]) 
-        alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 3)]
-        names(alphaCfi) <- c("lower", "upper")
-        scaleCfi$alpha <- alphaCfi
-        omegaCfi <- as.vector(unlist(tmp$freq$conf))[c(2, 4)]
+        fit <- relyFit[["freq"]][["fit.object"]]
+        params <- lavaan::parameterestimates(fit, level = options[["confidenceIntervalValue"]])
+        om_low <- params$ci.lower[params$lhs=="omega"]
+        om_up <- params$ci.upper[params$lhs=="omega"]
+        omegaCfi <- c(om_low, om_up)
         names(omegaCfi) <- c("lower", "upper")
         scaleCfi$omega <- omegaCfi
         scaleCfi <- scaleCfi[c(8, 7, 1, 2, 3, 4, 5, 6)] # check this when more estimators come in
       } else {
-        tmp <- Bayesrel::strel(dataset, estimates = c("alpha"), Bayes = F, item.dropped = T, 
-                               alpha.int.analytic = TRUE,
-                               interval = options[["confidenceIntervalValue"]]) 
-        alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 2)]
-        names(alphaCfi) <- c("lower", "upper")
-        scaleCfi$alpha <- alphaCfi
         scaleCfi <- scaleCfi[c(4, 8, 1, 2, 3, 5, 6, 7)] # check this when more estimators come in
       }
 
@@ -268,7 +268,6 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   selected <- derivedOptions[["selectedEstimatorsF"]]
   idxSelected <- which(selected)
   
-  print(str(model[["cfi"]][["scaleCfi"]]))
   if (!is.null(relyFit)) {
     allData <- cbind.data.frame(
       statistic = opts,

@@ -23,21 +23,14 @@ Form
         name:   "mcDonaldScalef"	
         label:  qsTr("McDonald's ω")         
         id:     mcdonaldf
+        checked: true
         
-        RadioButtonGroup {
-        title: qsTr("Estimation Method")
-        name: "omegaEst"
-        RadioButton {value: "cfa"; label: qsTr("CFA"); checked: true
         CheckBox
         {
           name:     "fitMeasures"	
           label:    qsTr("Single Factor Model Fit")         
-          enabled:  mcdonaldf.checked
+          enabled:  mcdonaldf.checked & cfa.checked
         }
-        }
-        RadioButton { value: "pfa"; label: qsTr("PFA")}
-        }
-
       }
       CheckBox 
       {     
@@ -131,6 +124,12 @@ Form
   Section
   {
     title: qsTr("Advanced Options")
+      RadioButtonGroup {
+        title: qsTr("Missing Values")
+        name: "missingValuesf"
+        RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise"); checked: true}
+        RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise")}
+        }
     IntegerField
     {
       name: "noSamplesf"
@@ -140,11 +139,14 @@ Form
       min: 100
       max: 1e7
     }
+
   RadioButtonGroup {
-        title: qsTr("Missing Values")
-        name: "missingValuesf"
-        RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise"); checked: true}
-        RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise")}
+      title: qsTr("Estimation Method")
+      name: "omegaEst"
+        RadioButton {value: "cfa"; label: qsTr("CFA"); checked: true; id: cfa
         }
+        RadioButton { value: "pfa"; label: qsTr("PFA")}
+      }
   }
+          
 }

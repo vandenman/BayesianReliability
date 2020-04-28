@@ -1,13 +1,12 @@
 reliabilityBayesian <- function(jaspResults, dataset, options) {
 
-  sink("~/Downloads/log_Bay.txt")
-  on.exit(sink(NULL))
+  # sink("~/Downloads/log_Bay.txt")
+  # on.exit(sink(NULL))
   
-
 	dataset <- .BayesianReliabilityReadData(dataset, options)
 
 	.BayesianReliabilityCheckErrors(dataset, options)
-
+  
 	model <- .BayesianReliabilityMainResults(jaspResults, dataset, options)
 
 	.BayesianReliabilityScaleTable(         jaspResults, model, options)
@@ -76,6 +75,10 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 # estimate reliability ----
 .BayesianReliabilityMainResults <- function(jaspResults, dataset, options) {
+  # startProgressbar(options[["noChains"]] * (options[["noSamples"]] - options[["noBurnin"]]) +
+  #                    ncol(dataset) * (options[["noChains"]] * (options[["noSamples"]] - options[["noBurnin"]])) +
+  #                    8)
+  startProgressbar(9)
   
   model <- jaspResults[["modelObj"]]$object
   relyFit <- model[["relyFit"]]
@@ -112,8 +115,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                      n.iter = options[["noSamples"]], n.burnin = options[["noBurnin"]], 
                                      n.chains = options[["noChains"]], thin = options[["noThin"]],
-                                     freq = F, item.dropped = TRUE, missing = missing))
-      
+                                     freq = F, item.dropped = TRUE, missing = missing, callback = progressbarTick))
 
       if (!is.null(relyFit[["miss_pairwise"]])) {
         model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
@@ -124,8 +126,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       
       # add the scale info
       corsamp <- apply(relyFit$Bayes$covsamp, c(1, 2), cov2cor)
+      progressbarTick()
       relyFit$Bayes$samp$avg_cor <- coda::mcmc(apply(corsamp, c(2, 3), function(x) mean(x[x!=1])))
-      relyFit$Bayes$est$avg_cor <- median(relyFit$Bayes$samp$avg_cor)
+      relyFit$Bayes$est$avg_cor <- mean(relyFit$Bayes$samp$avg_cor)
       
       # get rid of multiple chains, first save the chains:
       relyFit$Bayes$chains <- relyFit$Bayes$samp
@@ -136,7 +139,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       relyFit$Bayes$est$mean <- mean(rowMeans(dataset, na.rm = T))
       relyFit$Bayes$samp$sd <- c(NA_real_, NA_real_)
       relyFit$Bayes$est$sd <- sd(colMeans(dataset, na.rm = T))
-
+      
       # get rid of multiple chains, first save the chains:
       relyFit$Bayes$ifitem$chains <- relyFit$Bayes$ifitem$samp
       relyFit$Bayes$ifitem$samp <- lapply(relyFit$Bayes$ifitem$chains, .chainSmoker)
@@ -144,7 +147,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       # now the item statistics
       relyFit$Bayes$ifitem$samp$ircor <- .reliabilityItemRestCor(dataset, options[["noSamples"]], options[["noBurnin"]], 
                                                                  options[["noThin"]], options[["noChains"]], missing)
-      relyFit$Bayes$ifitem$est$ircor <- apply(relyFit$Bayes$ifitem$samp$ircor, 2, median)
+      relyFit$Bayes$ifitem$est$ircor <- apply(relyFit$Bayes$ifitem$samp$ircor, 2, mean)
       
       # mean and sd
       relyFit$Bayes$ifitem$est$mean <- colMeans(dataset, na.rm = T)
@@ -205,7 +208,9 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
   model[["derivedOptions"]] <- .BayesianReliabilityDerivedOptions(options)
   model[["itemsDropped"]] <- .unv(colnames(dataset))
-
+  
+  progressbarTick()
+  
 	return(model)
 }
 
@@ -254,7 +259,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   overTitle <- sprintf("%s%% Credible interval",
                        format(100*options[["credibleIntervalValue"]], digits = 3, drop0trailing = TRUE))
 	scaleTable$addColumnInfo(name = "statistic", title = "Statistic",        type = "string")
-	scaleTable$addColumnInfo(name = "postMean",  title = "Posterior Median", type = "number")
+	scaleTable$addColumnInfo(name = "postMean",  title = "Posterior Mean", type = "number")
 	scaleTable$addColumnInfo(name = "lower",     title = "Lower",            type = "number", overtitle = overTitle)
 	scaleTable$addColumnInfo(name = "upper",     title = "Upper",            type = "number", overtitle = overTitle)
 
@@ -270,7 +275,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 	    statistic = opts,
 	    postMean = unlist(relyFit$Bayes$est, use.names = FALSE),
 	    do.call(rbind, model[["cri"]][["scaleCri"]]))[idxSelected, ]
-	  # )[order, ][selected[order], ] # TODO: <- simplify this
 
 		scaleTable$setData(allData)
 
@@ -279,9 +283,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 	} else if (sum(selected) > 0L) {
 
-    # scaleTable[["statistic"]] <- opts[order][selected[order]]
-	  scaleTable[["statistic"]] <- opts
-	  
+	  scaleTable[["statistic"]] <- opts[idxSelected]
 
     nvar <- length(options[["variables"]])
     if (nvar > 0L && nvar < 3L)
@@ -329,21 +331,14 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   for (i in idxSelected) {
     if (estimators[i] %in% coefficients) {
       if (estimators[i] == "Item-rest correlation") { # no item deleted for item rest cor
-        itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
-                                overtitle = "Item-rest correlation")
-        itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
-                                overtitle = "Item-rest correlation")
-        itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Upper ", cred, "%"), type = "number", 
-                                overtitle = "Item-rest correlation")
-      } else if (estimators[i] == "McDonald's \u03C9") { # not median but mean for omega
         itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Mean", type = "number", 
-                                overtitle = overTitles[i])
+                                overtitle = "Item-rest correlation")
         itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
-                                overtitle = overTitles[i])
+                                overtitle = "Item-rest correlation")
         itemTable$addColumnInfo(name = paste0("upper", i), title = paste0("Upper ", cred, "%"), type = "number", 
-                                overtitle = overTitles[i])
+                                overtitle = "Item-rest correlation")
       } else {
-        itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Median", type = "number", 
+        itemTable$addColumnInfo(name = paste0("postMean", i), title = "Posterior Mean", type = "number", 
                                 overtitle = overTitles[i])
         itemTable$addColumnInfo(name = paste0("lower", i), title = paste0("Lower ", cred, "%"), type = "number", 
                                 overtitle = overTitles[i])
@@ -572,7 +567,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 	# xBreaks <- JASPgraphs::getPrettyAxisBreaks(datDens$x)
 	xBreaks <- pretty(datDens$x, n = 4)
-	print(xBreaks)
 	# max height posterior is at 90% of plot area; remainder is for credible interval
 	ymax <- max(d$y) / .9
 	yBreaks <- JASPgraphs::getPrettyAxisBreaks(c(0, ymax))
@@ -837,10 +831,10 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     # ggplot2::theme_linedraw() +
     ggplot2::theme(strip.background = ggplot2::element_rect(fill = "white"),
                    strip.text = ggplot2::element_text(colour = "black")) +
-    ggplot2::xlab(nms) +
     ggplot2::ylab("Item Dropped") +
+    ggplot2::xlab(nms) +
     ggplot2::scale_fill_grey() +
-    ggplot2::scale_y_discrete(expand = ggplot2::expand_scale(mult = c(0.1, 0.25))) 
+    ggplot2::scale_y_discrete(expand = ggplot2::expand_scale(mult = c(0.1, 0.25)))  
     # ggplot2::scale_y_discrete(expand = ggplot2::expand_scale(add = c(0.25, 1.5))) 
     # ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5, vjust = 4, size = 20),
     #                axis.title = ggplot2::element_text(size = 16),
@@ -880,8 +874,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   
   # xlim <- JASPgraphs::getPrettyAxisBreaks(c(0, (options[["noSamples"]] - options[["noBurnin"]]) * 
   #                                             options[["noChains"]] / options[["noThin"]]))
-  xlim <- (options[["noSamples"]] - options[["noBurnin"]]) *
-                                              options[["noChains"]] / options[["noThin"]]
+  xlim <- (options[["noSamples"]] - options[["noBurnin"]]) / options[["noThin"]]
   if (!is.null(relyFit)) {
     for (i in indices) {
       if (is.null(plotContainerTP[[nmsObjs[i]]])) {
@@ -913,16 +906,23 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 .BayesianReliabilityMakeTracePlot <- function(relyFit, i, nms, xlim) {
   
-  dt <- data.frame(relyFit$Bayes$samp[[i]])
-  names(dt)[1] <- "Value"
-  dt$Iterations <- seq(1, nrow(dt))
+  dd <- relyFit$Bayes$chains[[i]]
+  xBreaks <- pretty(1:length(dd[1, ]), n=4)
   
-  g <- ggplot2::ggplot(dt, ggplot2::aes(x = Iterations, y = Value)) +
-    ggplot2::geom_line() +
+  dv <- cbind(dd[1, ], 1, seq(1, ncol(dd))) 
+  for (j in 2:nrow(dd)) {
+    dv <- rbind(dv, cbind(dd[j, ], j, seq(1, ncol(dd))))
+  }
+  dat <- data.frame(dv)
+  colnames(dat) <- c("Value", "chain", "Iterations")
+  dat$chain <- as.factor(dat$chain)
+  
+  g <- ggplot2::ggplot(dat, ggplot2::aes(x = Iterations, y = Value, colour = chain)) +
+    ggplot2::geom_line(size = .3) +
     ggplot2::ylab(nms) +
-    ggplot2::scale_x_continuous(name = "Iterations", breaks = seq(0, xlim, 500), limits = c(0, xlim))
+    # ggplot2::scale_colour_grey() +
+    ggplot2::scale_x_continuous(name = "Iterations", breaks = xBreaks)
 
-    
   return(JASPgraphs::themeJasp(g))
   
 }

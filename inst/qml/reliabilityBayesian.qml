@@ -23,7 +23,8 @@ Form
     		  name:   "mcDonaldScale"	
     		  label:  qsTr("McDonald's ω")         
     		  id:     mcdonald
-    
+    		  checked: true
+
     		  CheckBox 
     		  {    
     		  name:   "dispPPC"	
@@ -37,7 +38,7 @@ Form
           name: "alphaScale";				
           label: qsTr("Cronbach's α");         
           id: cronbach   		      
-          }
+        }
         CheckBox 
         {     
           name: "guttman2Scale";			
@@ -124,7 +125,7 @@ Form
               title: qsTr("")
               name: "orderType"
               RadioButton { value: "orderItemMean"; label: qsTr("Order items by mean"); checked: true}
-              RadioButton { value: "orderItemKL"; label: qsTr("Order items by KL-distance")}
+              RadioButton { value: "orderItemKL"; label: qsTr("Order items by KL-divergence")}
               RadioButton { value: "orderItemKS"; label: qsTr("Order items by KS-distance")}
             }
           }
