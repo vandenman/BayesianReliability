@@ -24,19 +24,12 @@ Form
         label:  qsTr("McDonald's ω")         
         id:     mcdonaldf
         checked: true
-        
-        CheckBox
-        {
-          name:     "fitMeasures"	
-          label:    qsTr("Single Factor Model Fit")         
-          enabled:  mcdonaldf.checked & cfa.checked
-        }
       }
       CheckBox 
       {     
         name: "alphaScalef";				
         label: qsTr("Cronbach's α");         
-        id: cronbachf   		      
+        id: cronbachf 
       }
       CheckBox 
       {     
@@ -124,7 +117,7 @@ Form
   Section
   {
     title: qsTr("Advanced Options")
-      RadioButtonGroup {
+    RadioButtonGroup {
         title: qsTr("Missing Values")
         name: "missingValuesf"
         RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise"); checked: true}
@@ -140,13 +133,35 @@ Form
       max: 1e7
     }
 
-  RadioButtonGroup {
-      title: qsTr("Estimation Method")
+    RadioButtonGroup {
+      title: qsTr("McDonald's ω Estimation Method")
       name: "omegaEst"
-        RadioButton {value: "cfa"; label: qsTr("CFA"); checked: true; id: cfa
+        RadioButton {value: "cfa"; label: qsTr("CFA"); checked: true;
+          CheckBox
+          {
+            name:     "fitMeasures"	
+            label:    qsTr("Single Factor Model Fit")         
+            enabled:  mcdonaldf.checked
+          }
         }
         RadioButton { value: "pfa"; label: qsTr("PFA")}
-      }
+    }
+    RadioButtonGroup {
+        title: qsTr("Cronbach's α")
+        name: "alphaMethod"
+        RadioButton{
+        
+          value:     "alphaUnstand"	
+          label:    qsTr("Unstandardized")         
+          checked: true
+        }
+        RadioButton
+        {
+          value:     "alphaStand"	
+          label:    qsTr("Standardized")         
+        }
+    }
+ 
   }
           
 }

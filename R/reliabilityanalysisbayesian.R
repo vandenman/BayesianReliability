@@ -278,8 +278,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 		scaleTable$setData(allData)
 
-		if (!is.null(model[["footnotes"]]))
-		  scaleTable$addFootnote(model[["footnotes"]])
+		if (!is.null(model[["footnote"]]))
+		  scaleTable$addFootnote(model[["footnote"]])
 
 	} else if (sum(selected) > 0L) {
 

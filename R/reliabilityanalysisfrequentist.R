@@ -82,33 +82,56 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         dataset[ ,cols] = total - dataset[ ,cols]
       }
 
+
+      model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
+      
       if (options[["missingValuesf"]] == "excludeCasesPairwise") {
         missing <- "pairwise"
-      }      else {
+        use.cases <- "pairwise.complete.obs"
+        model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
+      } else {
         pos <- which(is.na(dataset), arr.ind = T)[, 1]
         dataset <- dataset[-pos, ] 
-      }
-      # else if (options[["missingValuesf"]] == "excludeCasesListwise") {
-      #   missing <- "listwise"
-      #   }
-
-      
-      model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
-      relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
-                                     Bayes = FALSE, n.boot = options[["noSamplesf"]],
-                                     item.dropped = TRUE, omega.freq.method = options[["omegaEst"]], 
-                                     alpha.int.analytic = TRUE, 
-                                     missing = missing))
-      
-
-      if (!is.null(relyFit[["miss_pairwise"]])) {
-        model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
-        use.cases <- "pairwise.complete.obs"
-      } else {
+        use.cases <- "complete.obs"
         model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", nrow(dataset), 
                                       " complete cases.")
-        use.cases <- "complete.obs"
       }
+      
+      if (options[["alphaMethod"]] == "alphaStand") {
+        cc <- Bayesrel:::make_symmetric(cov2cor(cov(dataset, use = use.cases)))
+        relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("lambda2", "lambda6", "glb", "omega"), 
+                                       Bayes = FALSE, n.boot = options[["noSamplesf"]],
+                                       item.dropped = TRUE, omega.freq.method = options[["omegaEst"]], 
+                                       alpha.int.analytic = TRUE, 
+                                       missing = missing))
+        
+        out <- try(Bayesrel:::strel(cc, estimates = "alpha", Bayes = FALSE,
+                                item.dropped = TRUE, 
+                                alpha.int.analytic = TRUE, 
+                                missing = missing))
+        relyFit$freq$est$freq_alpha <- out$freq$est$freq_alpha
+        relyFit$freq$ifitem$alpha <- out$freq$ifitem$alpha
+        relyFit[["freq"]][["est"]] <- relyFit[["freq"]][["est"]][c(5, 1, 2, 3, 4)]
+        relyFit[["freq"]][["ifitem"]] <- relyFit[["freq"]][["ifitem"]][c(5, 1, 2, 3, 4)]
+        
+      } else {
+        cc <- Bayesrel:::make_symmetric(cov(dataset, use = use.cases))
+        relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
+                                       Bayes = FALSE, n.boot = options[["noSamplesf"]],
+                                       item.dropped = TRUE, omega.freq.method = options[["omegaEst"]], 
+                                       alpha.int.analytic = TRUE, 
+                                       missing = missing))
+      }
+
+
+      # if (!is.null(relyFit[["miss_pairwise"]])) {
+      #   model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
+      #   use.cases <- "pairwise.complete.obs"
+      # } else {
+      #   model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", nrow(dataset), 
+      #                                 " complete cases.")
+      #   use.cases <- "complete.obs"
+      # }
       
       if (!is.null(relyFit[["freq"]][["omega.error"]])) {
         model[["footnote"]] <- paste0(model[["footnote"]], " omega estimation method switched to PFA because the CFA
@@ -157,7 +180,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         model[["relyFit"]] <- relyFit
         
         stateObj <- createJaspState(model)
-        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf", "omegaEst"))
+        stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf", "omegaEst", 
+                                      "alphaMethod"))
         jaspResults[["modelObj"]] <- stateObj
 
       }
@@ -174,7 +198,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                               options[["confidenceIntervalValue"]])
       
       # alpha int is analytical, not from the boot sample, so:
-      tmp <- Bayesrel::strel(dataset, estimates = c("alpha"), Bayes = F,
+      tmp <- Bayesrel::strel(cc, estimates = c("alpha"), Bayes = F,
                              alpha.int.analytic = TRUE,
                              interval = options[["confidenceIntervalValue"]]) 
       alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 2)]
@@ -252,7 +276,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   scaleTableF <- createJaspTable("Frequentist Scale Reliability Statistics")
   scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef",
                                    "glbScalef", "reverseScaledItems", "confidenceIntervalValue", "noSamplesf", 
-                                   "averageInterItemCor", "meanScale", "sdScale", "missingValuesf", "omegaEst"))
+                                   "averageInterItemCor", "meanScale", "sdScale", "missingValuesf", "omegaEst", 
+                                   "alphaMethod"))
   
   overTitle <- sprintf("%s%% Confidence interval",
                        format(100*options[["confidenceIntervalValue"]], digits = 3, drop0trailing = TRUE))
@@ -276,8 +301,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
     
     scaleTableF$setData(allData)
     
-    if (!is.null(model[["footnotes"]]))
-      scaleTableF$addFootnote(model[["footnotes"]])
+    if (!is.null(model[["footnote"]]))
+      scaleTableF$addFootnote(model[["footnote"]])
     
   } else if (sum(selected) > 0L) {
     
@@ -319,7 +344,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                   "averageInterItemCor", "meanScale", "sdScale",
                                   "mcDonaldItemf",  "alphaItemf",  "guttman2Itemf", "guttman6Itemf", "glbItemf",
                                   "reverseScaledItems", "meanItem", "sdItem", "itemRestCor", "missingValuesf", 
-                                  "omegaEst"))
+                                  "omegaEst", "alphaMethod"))
   itemTableF$addColumnInfo(name = "variable", title = "Item", type = "string")
   
   idxSelectedF <- which(itemDroppedSelectedF)
@@ -378,6 +403,10 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         measure = NA_real_,
         value = NA_real_
       )
+      if (!is.null(relyFit[["freq"]][["omega.error"]])) {
+          fitTable$addFootnote("Fit measures cannot be displayed because the omega estimation method switched 
+                                to PFA as the CFA did not find a solution.")
+      }
     } else {
       allData <- data.frame(
         measure = opts,
@@ -385,11 +414,11 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       )
     }
 
-
     fitTable$setData(allData)
   }
   if (!is.null(model[["error"]]))
     fitTable$setError(model[["error"]])
+
 
   jaspResults[["fitTable"]] <- fitTable
 }
