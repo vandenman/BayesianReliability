@@ -61,8 +61,9 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
 }
 
 # estimate reliability ----
+# maybe in the future it would be easier to have one function for every estimator...
 .frequentistReliabilityMainResults <- function(jaspResults, dataset, options) {
-
+  startProgressbar(8)
   model <- jaspResults[["modelObj"]]$object
   relyFit <- model[["relyFit"]]
   if (is.null(model)) {
@@ -82,7 +83,9 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         dataset[ ,cols] = total - dataset[ ,cols]
       }
 
-
+      # observations for alpha interval need to be speccified: 
+      model[["obs"]] <- nrow(dataset)
+      
       model[["footnote"]] <- .frequentistReliabilityCheckLoadings(dataset, variables)
       
       if (options[["missingValuesf"]] == "excludeCasesPairwise") {
@@ -97,41 +100,69 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
                                       " complete cases.")
       }
       
+      if (options[["alphaInterval"]] == "alphaAnalytic") {
+        alphaAna <- TRUE
+      } else {
+        alphaAna <- FALSE
+      }
+      
+      if (options[["omegaInterval"]] == "omegaAnalytic") {
+        omegaAna <- TRUE
+      } else {
+        omegaAna <- FALSE
+      }
+      
+      if (options[["bootType"]] == "bootNonpara") {
+        para <- FALSE
+      } else {
+        para <- TRUE
+      }
+
       if (options[["alphaMethod"]] == "alphaStand") {
-        cc <- Bayesrel:::make_symmetric(cov2cor(cov(dataset, use = use.cases)))
+        model[["dat_cov"]] <- Bayesrel:::make_symmetric(cov2cor(cov(dataset, use = use.cases)))
         relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("lambda2", "lambda6", "glb", "omega"), 
                                        Bayes = FALSE, n.boot = options[["noSamplesf"]],
                                        item.dropped = TRUE, omega.freq.method = options[["omegaEst"]], 
-                                       alpha.int.analytic = TRUE, 
-                                       missing = missing))
+                                       omega.int.analytic = omegaAna,
+                                       para.boot = para,
+                                       missing = missing, callback = progressbarTick))
         
-        out <- try(Bayesrel:::strel(cc, estimates = "alpha", Bayes = FALSE,
-                                item.dropped = TRUE, 
-                                alpha.int.analytic = TRUE, 
-                                missing = missing))
-        relyFit$freq$est$freq_alpha <- out$freq$est$freq_alpha
-        relyFit$freq$ifitem$alpha <- out$freq$ifitem$alpha
+        relyFit$freq$est$freq_alpha <- Bayesrel:::applyalpha(model[["dat_cov"]])
+        p <- ncol(dataset)
+        Ctmp <- array(0, c(p, p - 1, p - 1))
+        for (i in 1:p){
+          Ctmp[i, , ] <- model[["dat_cov"]][-i, -i]
+        }
+        relyFit$freq$ifitem$alpha <- apply(Ctmp, 1, Bayesrel:::applyalpha)
+        
+        if (!alphaAna) { # when standardized alpha, but bootstrapped alpha interval:
+          cors <- array(0, c(options[["noSamplesf"]], p, p))
+          for (i in 1:options[["noSamplesf"]]) {
+            cors[i, , ] <- cov2cor(relyFit$freq$covsamp[i, , ])
+          }
+          relyFit$freq$boot$alpha <- apply(cors, 1, Bayesrel:::applyalpha)
+          if (omegaAna) {
+            relyFit[["freq"]][["boot"]] <- relyFit[["freq"]][["boot"]][c(4, 1, 2, 3)]
+          } else {
+            relyFit[["freq"]][["boot"]] <- relyFit[["freq"]][["boot"]][c(5, 1, 2, 3, 4)]
+          }
+          
+        }
+        
         relyFit[["freq"]][["est"]] <- relyFit[["freq"]][["est"]][c(5, 1, 2, 3, 4)]
         relyFit[["freq"]][["ifitem"]] <- relyFit[["freq"]][["ifitem"]][c(5, 1, 2, 3, 4)]
         
       } else {
-        cc <- Bayesrel:::make_symmetric(cov(dataset, use = use.cases))
+        model[["dat_cov"]] <- Bayesrel:::make_symmetric(cov(dataset, use = use.cases))
         relyFit <- try(Bayesrel::strel(data = dataset, estimates=c("alpha", "lambda2", "lambda6", "glb", "omega"), 
                                        Bayes = FALSE, n.boot = options[["noSamplesf"]],
                                        item.dropped = TRUE, omega.freq.method = options[["omegaEst"]], 
-                                       alpha.int.analytic = TRUE, 
-                                       missing = missing))
+                                       alpha.int.analytic = alphaAna, 
+                                       omega.int.analytic = omegaAna,
+                                       missing = missing, callback = progressbarTick))
       }
 
 
-      # if (!is.null(relyFit[["miss_pairwise"]])) {
-      #   model[["footnote"]] <- paste0(model[["footnote"]], ". Using pairwise complete cases.")
-      #   use.cases <- "pairwise.complete.obs"
-      # } else {
-      #   model[["footnote"]] <- paste0(model[["footnote"]], ". Using ", nrow(dataset), 
-      #                                 " complete cases.")
-      #   use.cases <- "complete.obs"
-      # }
       
       if (!is.null(relyFit[["freq"]][["omega.error"]])) {
         model[["footnote"]] <- paste0(model[["footnote"]], " omega estimation method switched to PFA because the CFA
@@ -151,6 +182,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       relyFit$freq$boot$avg_cor <- apply(corsamp, 2, function(x) mean(x[x!=1]))
       relyFit$freq$boot$mean <- c(NA_real_, NA_real_)
       relyFit$freq$boot$sd <- c(NA_real_, NA_real_)
+      progressbarTick()
       
       
       # now the item statistics
@@ -181,7 +213,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         
         stateObj <- createJaspState(model)
         stateObj$dependOn(options = c("variables", "reverseScaledItems", "noSamplesf", "missingValuesf", "omegaEst", 
-                                      "alphaMethod"))
+                                      "alphaMethod", "alphaInterval", "omegaInterval", "bootType"))
         jaspResults[["modelObj"]] <- stateObj
 
       }
@@ -196,18 +228,18 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       
       scaleCfi <- .frequentistReliabilityCalcCfi(relyFit[["freq"]][["boot"]],             
                                               options[["confidenceIntervalValue"]])
-      
+
       # alpha int is analytical, not from the boot sample, so:
-      tmp <- Bayesrel::strel(cc, estimates = c("alpha"), Bayes = F,
-                             alpha.int.analytic = TRUE,
-                             interval = options[["confidenceIntervalValue"]]) 
-      alphaCfi <- as.vector(unlist(tmp$freq$conf))[c(1, 2)]
-      names(alphaCfi) <- c("lower", "upper")
-      scaleCfi$alpha <- alphaCfi
+      if (options[["alphaInterval"]] == "alphaAnalytic") {
+
+        alphaCfi <- Bayesrel:::ciAlpha(1 - options[["confidenceIntervalValue"]], model[["obs"]], model[["dat_cov"]])
+        names(alphaCfi) <- c("lower", "upper")
+        scaleCfi$alpha <- alphaCfi
+      }
+
       
-      # omega cfa doesnt work with bootstrapping:
-      # this will work with the github package, so far the interval for omega doesnt change.
-      if (is.null(relyFit[["freq"]][["omega.pfa"]])) { 
+      # omega cfa analytic interval:
+      if (is.null(relyFit[["freq"]][["omega.pfa"]]) & (options[["omegaInterval"]] == "omegaAnalytic")) { 
         fit <- relyFit[["freq"]][["fit.object"]]
         params <- lavaan::parameterestimates(fit, level = options[["confidenceIntervalValue"]])
         om_low <- params$ci.lower[params$lhs=="omega"]
@@ -215,9 +247,17 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         omegaCfi <- c(om_low, om_up)
         names(omegaCfi) <- c("lower", "upper")
         scaleCfi$omega <- omegaCfi
-        scaleCfi <- scaleCfi[c(8, 7, 1, 2, 3, 4, 5, 6)] # check this when more estimators come in
+        if (options[["alphaInterval"]] == "alphaAnalytic") {
+          scaleCfi <- scaleCfi[c(8, 7, 1, 2, 3, 4, 5, 6)] # check this when more estimators come in
+        } else {
+          scaleCfi <- scaleCfi[c(8, 1, 2, 3, 4, 5, 6, 7)] # check this when more estimators come in
+        }
       } else {
-        scaleCfi <- scaleCfi[c(4, 8, 1, 2, 3, 5, 6, 7)] # check this when more estimators come in
+        if (options[["alphaInterval"]] == "alphaAnalytic") {
+          scaleCfi <- scaleCfi[c(4, 8, 1, 2, 3, 5, 6, 7)] # check this when more estimators come in
+        } else {
+          scaleCfi <- scaleCfi[c(5, 1, 2, 3, 4, 6, 7, 8)] # check this when more estimators come in
+        }
       }
 
       cfiState <- list(scaleCfi = scaleCfi)
@@ -231,7 +271,8 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   
   model[["derivedOptions"]] <- .frequentistReliabilityDerivedOptions(options)
   model[["itemsDropped"]] <- .unv(colnames(dataset))
-
+  progressbarTick()
+  
   return(model)
 }
 
@@ -244,7 +285,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
     if (any(is.na(boot[[nm]]))) {
       cfi[[nm]] <- c(NA_real_, NA_real_)
     } else {
-      cfi[[nm]] <- quantile(boot[[nm]], prob = c(0+(1-cfiValue)/2, 1-(1-cfiValue)/2))
+      cfi[[nm]] <- quantile(boot[[nm]], prob = c((1-cfiValue)/2, 1-(1-cfiValue)/2))
     }
     names(cfi[[nm]]) <- c("lower", "upper")
   }
@@ -277,7 +318,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
   scaleTableF$dependOn(options = c("variables", "mcDonaldScalef", "alphaScalef", "guttman2Scalef", "guttman6Scalef",
                                    "glbScalef", "reverseScaledItems", "confidenceIntervalValue", "noSamplesf", 
                                    "averageInterItemCor", "meanScale", "sdScale", "missingValuesf", "omegaEst", 
-                                   "alphaMethod"))
+                                   "alphaMethod", "alphaInterval", "omegaInterval", "bootType"))
   
   overTitle <- sprintf("%s%% Confidence interval",
                        format(100*options[["confidenceIntervalValue"]], digits = 3, drop0trailing = TRUE))

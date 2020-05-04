@@ -122,19 +122,29 @@ Form
         name: "missingValuesf"
         RadioButton { value: "excludeCasesPairwise"; label: qsTr("Exclude cases pairwise"); checked: true}
         RadioButton { value: "excludeCasesListwise"; label: qsTr("Exclude cases listwise")}
-        }
-    IntegerField
-    {
-      name: "noSamplesf"
-      label: qsTr("No. of bootstrap samples")
-      defaultValue: 500
-      fieldWidth: 50
-      min: 100
-      max: 1e7
-    }
+    } 
+    Group {
+      title: qsTr("Bootstrap")
+      IntegerField
+      {
+        name: "noSamplesf"
+        label: qsTr("No. of bootstrap samples")
+        defaultValue: 1000
+        fieldWidth: 50
+        min: 100
+        max: 1e7
+      }
+      RadioButtonGroup {
+        title: qsTr("")
+        name: "bootType"
+        RadioButton {value: "bootNonpara"; label: qsTr("Non-parametric bootstrap"); checked: true}
+        RadioButton {value: "bootPara"; label: qsTr("Parametric bootstrap")}
+      }
+
+    }    
 
     RadioButtonGroup {
-      title: qsTr("McDonald's ω Estimation Method")
+      title: qsTr("McDonald's ω Estimation")
       name: "omegaEst"
         RadioButton {value: "cfa"; label: qsTr("CFA"); checked: true;
           CheckBox
@@ -143,14 +153,32 @@ Form
             label:    qsTr("Single Factor Model Fit")         
             enabled:  mcdonaldf.checked
           }
+          RadioButtonGroup {
+            title: qsTr("")
+            name: "omegaInterval"
+            RadioButton{
+            
+              value:     "omegaAnalytic"	
+              label:    qsTr("Analytic interval")         
+              checked: true
+            }
+            RadioButton
+            {
+              value:     "omegaBoot"	
+              label:    qsTr("Bootstrapped interval")         
+            }
+          }
         }
         RadioButton { value: "pfa"; label: qsTr("PFA")}
     }
-    RadioButtonGroup {
-        title: qsTr("Cronbach's α")
+    
+    Group{
+      title: qsTr("Cronbach's α Estimation")
+      
+        RadioButtonGroup {
+        title: qsTr("")
         name: "alphaMethod"
         RadioButton{
-        
           value:     "alphaUnstand"	
           label:    qsTr("Unstandardized")         
           checked: true
@@ -160,7 +188,24 @@ Form
           value:     "alphaStand"	
           label:    qsTr("Standardized")         
         }
+      }
+      
+      RadioButtonGroup {
+        title: qsTr("")
+        name: "alphaInterval"
+        RadioButton{
+          value:     "alphaAnalytic"	
+          label:    qsTr("Analytic interval")         
+          checked: true
+        }
+        RadioButton
+        {
+          value:     "alphaBoot"	
+          label:    qsTr("Boostrapped interval")         
+        }
+      }
     }
+
  
   }
           
