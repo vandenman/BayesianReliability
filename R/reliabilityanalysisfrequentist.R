@@ -63,7 +63,9 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
 # estimate reliability ----
 # maybe in the future it would be easier to have one function for every estimator...
 .frequentistReliabilityMainResults <- function(jaspResults, dataset, options) {
-  startProgressbar(8)
+  samples <- options[["noSamplesf"]]
+  p <- ncol(dataset)
+  
   model <- jaspResults[["modelObj"]]$object
   relyFit <- model[["relyFit"]]
   if (is.null(model)) {
@@ -102,21 +104,38 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       
       if (options[["alphaInterval"]] == "alphaAnalytic") {
         alphaAna <- TRUE
+        alphaSteps <- 0
       } else {
         alphaAna <- FALSE
+        alphaSteps <- samples
+        if (options[["alphaMethod"]] == "alphaStand") {
+          alphaSteps <- alphaSteps + samples
+        }
       }
       
-      if (options[["omegaInterval"]] == "omegaAnalytic") {
+      if (options[["omegaEst"]] == "pfa") {
+        omegaSteps <- samples
         omegaAna <- TRUE
       } else {
-        omegaAna <- FALSE
+        if (options[["omegaInterval"]] == "omegaAnalytic") {
+          omegaAna <- TRUE
+          omegaSteps <- 0
+        } else {
+          omegaAna <- FALSE
+          omegaSteps <- 0
+          # omegaSteps <- samples  # not working because we cant tick in the bootstrapLavaan function
+        }
       }
-      
+
       if (options[["bootType"]] == "bootNonpara") {
         para <- FALSE
       } else {
         para <- TRUE
       }
+      
+      startProgressbar(samples * 5 # cov_mat bootstrapping and coefficients (also avg_cor) without alpha and omega
+                       + alphaSteps
+                       + omegaSteps) # dont need ifitem steps since that is very fast
 
       if (options[["alphaMethod"]] == "alphaStand") {
         model[["dat_cov"]] <- Bayesrel:::make_symmetric(cov2cor(cov(dataset, use = use.cases)))
@@ -138,7 +157,7 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
         if (!alphaAna) { # when standardized alpha, but bootstrapped alpha interval:
           cors <- array(0, c(options[["noSamplesf"]], p, p))
           for (i in 1:options[["noSamplesf"]]) {
-            cors[i, , ] <- cov2cor(relyFit$freq$covsamp[i, , ])
+            cors[i, , ] <- .cov2cor.callback(relyFit$freq$covsamp[i, , ], progressbarTick)
           }
           relyFit$freq$boot$alpha <- apply(cors, 1, Bayesrel:::applyalpha)
           if (omegaAna) {
@@ -176,14 +195,11 @@ reliabilityFrequentist <- function(jaspResults, dataset, options) {
       relyFit$freq$est$mean <- mean(rowMeans(dataset, na.rm = T))
       relyFit$freq$est$sd <- sd(colMeans(dataset, na.rm = T))
 
-
-      
-      corsamp <- apply(relyFit$freq$covsamp, c(1), cov2cor)
+      corsamp <- apply(relyFit$freq$covsamp, c(1), .cov2cor.callback, progressbarTick)
       relyFit$freq$boot$avg_cor <- apply(corsamp, 2, function(x) mean(x[x!=1]))
       relyFit$freq$boot$mean <- c(NA_real_, NA_real_)
       relyFit$freq$boot$sd <- c(NA_real_, NA_real_)
-      progressbarTick()
-      
+
       
       # now the item statistics
       relyFit$freq$ifitem$ircor <- NULL

@@ -75,11 +75,14 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 # estimate reliability ----
 .BayesianReliabilityMainResults <- function(jaspResults, dataset, options) {
-  # startProgressbar(options[["noChains"]] * (options[["noSamples"]] - options[["noBurnin"]]) +
-  #                    ncol(dataset) * (options[["noChains"]] * (options[["noSamples"]] - options[["noBurnin"]])) +
-  #                    8)
-  startProgressbar(9)
   
+  chains <- options[["noChains"]]
+  samples <- options[["noSamples"]]
+  p <- ncol(dataset)
+  startProgressbar((chains*samples)*7 # cov sampling + every coefficient (also avg_cor)
+                    + (chains*samples)*6*p) # every coefficient for if item samples (also item_rest_cor)
+
+
   model <- jaspResults[["modelObj"]]$object
   relyFit <- model[["relyFit"]]
   if (is.null(model)) {
@@ -125,8 +128,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
       }
       
       # add the scale info
-      corsamp <- apply(relyFit$Bayes$covsamp, c(1, 2), cov2cor)
-      progressbarTick()
+      corsamp <- apply(relyFit$Bayes$covsamp, c(1, 2), .cov2cor.callback, progressbarTick)
       relyFit$Bayes$samp$avg_cor <- coda::mcmc(apply(corsamp, c(2, 3), function(x) mean(x[x!=1])))
       relyFit$Bayes$est$avg_cor <- mean(relyFit$Bayes$samp$avg_cor)
       
@@ -146,7 +148,8 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
       # now the item statistics
       relyFit$Bayes$ifitem$samp$ircor <- .reliabilityItemRestCor(dataset, options[["noSamples"]], options[["noBurnin"]], 
-                                                                 options[["noThin"]], options[["noChains"]], missing)
+                                                                 options[["noThin"]], options[["noChains"]], missing, 
+                                                                 callback = progressbarTick)
       relyFit$Bayes$ifitem$est$ircor <- apply(relyFit$Bayes$ifitem$samp$ircor, 2, mean)
       
       # mean and sd
@@ -208,8 +211,6 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
   model[["derivedOptions"]] <- .BayesianReliabilityDerivedOptions(options)
   model[["itemsDropped"]] <- .unv(colnames(dataset))
-  
-  progressbarTick()
   
 	return(model)
 }
@@ -932,7 +933,7 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
 
 
 # ----- some other functions -----------------
-.reliabilityItemRestCor <- function(dataset, n.iter, n.burnin, thin, n.chains, missing) {
+.reliabilityItemRestCor <- function(dataset, n.iter, n.burnin, thin, n.chains, missing, callback) {
 
   help_dat <- array(0, c(ncol(dataset), nrow(dataset), 2))
   
@@ -941,18 +942,19 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
   }
   
   ircor_samp <- apply(help_dat, 1, .WishartCorTransform, n.iter = n.iter, n.burnin = n.burnin, thin = thin,
-                      n.chains = n.chains, missing = missing)
+                      n.chains = n.chains, missing = missing, callback = callback)
   return(ircor_samp)
 }
 
 
 
-.WishartCorTransform <- function(x, n.iter, n.burnin, thin, n.chains, missing) {
+.WishartCorTransform <- function(x, n.iter, n.burnin, thin, n.chains, missing, callback) {
   pairwise <- FALSE
   if (missing == "pairwise") {pairwise <- TRUE}
-  tmp_cov <- Bayesrel:::covSamp(x, n.iter, n.burnin, thin, n.chains, pairwise)$cov_mat
+  tmp_cov <- Bayesrel:::covSamp(x, n.iter, n.burnin, thin, n.chains, pairwise, callback)$cov_mat
   tmp_cor <- apply(tmp_cov, c(1, 2), cov2cor)
   out <- apply(tmp_cor, c(2, 3), function(x) mean(x[x!=1]))
+  callback()
   return(out)
 }
 
@@ -977,5 +979,10 @@ reliabilityBayesian <- function(jaspResults, dataset, options) {
     Av <- apply(A, seq(3, length(d), 1), as.vector)
   }
   return(coda::mcmc(Av))
+}
+
+.cov2cor.callback <- function(C, callback) {
+  callback()
+  return(cov2cor(C))
 }
 
